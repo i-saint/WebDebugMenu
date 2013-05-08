@@ -95,6 +95,8 @@ public:
     void        addEvent(const wdmEventData &e);
     void        flushEvent();
 
+    wdmString&  createJSONData();
+
 private:
     static wdmSystem *s_inst;
     node_cont m_nodes;
@@ -103,6 +105,7 @@ private:
     bool m_end_flag;
     Poco::AtomicCounter m_idgen;
     Poco::Mutex m_mutex;
+    wdmString m_json;
 
     wdmServerConfig m_conf;
     Poco::Net::HTTPServer *m_server;
@@ -214,12 +217,19 @@ public:
             EachInputValue(request, [&](const char *value){
                 // todo
             });
+            response.setContentType("text/plain");
+            response.setContentLength(2);
+            std::ostream &ostr = response.send();
+            ostr.write("ok", 3);
+        }
+        else if(request.getURI()=="/data") {
+            const wdmString &json = wdmSystem::getInstance()->createJSONData();
+            response.setContentType("application/json");
+            response.setContentLength(json.size());
+            std::ostream &ostr = response.send();
+            ostr.write(&json[0], json.size());
         }
 
-        response.setContentType("text/plain");
-        response.setContentLength(2);
-        std::ostream &ostr = response.send();
-        ostr.write("ok", 3);
     }
 };
 
@@ -231,7 +241,7 @@ public:
         if(request.getURI() == "/") {
             return new wdmFileRequestHandler(std::string(GetCurrentModuleDirectory())+std::string(s_root_dir)+"/index.html");
         }
-        else if(request.getURI()=="/command") {
+        else if(request.getURI()=="/command" || request.getURI()=="/data") {
             return new wdmCommandHandler();
         }
         else {
@@ -276,6 +286,7 @@ wdmSystem::wdmSystem()
     , m_server(NULL)
 {
     m_root = new wdmNodeBase();
+    m_json.resize(1024*1024*16);
 
     if(!m_server) {
         Poco::Net::HTTPServerParams* params = new Poco::Net::HTTPServerParams;
@@ -353,6 +364,24 @@ void wdmSystem::flushEvent()
         }
     }
     m_events.clear();
+}
+
+wdmString& wdmSystem::createJSONData()
+{
+    Poco::Mutex::ScopedLock lock(m_mutex);
+    m_json.resize(m_json.capacity());
+    size_t ret = 0;
+    for(;;) {
+        ret = m_root->jsonize(&m_json[0], m_json.size());
+        if(ret==m_json.size()) {
+            m_json.resize(m_json.size()*2);
+        }
+        else {
+            break;
+        }
+    }
+    m_json.resize(ret);
+    return m_json;
 }
 
 

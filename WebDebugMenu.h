@@ -11,11 +11,11 @@
 
 #if   defined(wdmDLL_Impl)
 #   define wdmIntermodule __declspec(dllexport)
-#elif defined(wdmDLL)
+#elif defined(wdmStatic)
+#   define wdmIntermodule
+#else // wdmDynamic
 #   define wdmIntermodule __declspec(dllimport)
 #   pragma comment(lib, "WebDebugMenu.lib")
-#else
-#   define wdmIntermodule
 #endif
 
 
@@ -41,7 +41,7 @@ public:
     virtual void        eraseChild(wdmNode *child)=0;
     virtual void        setName(const char *name, size_t len=0)=0;
     virtual void        setParent(wdmNode *parent)=0;
-    virtual size_t      stringnizeValue(char *out, size_t len) const=0;
+    virtual size_t      jsonize(char *out, size_t len) const=0;
     virtual bool        handleEvent(const wdmEvent &evt)=0;
 };
 
@@ -65,8 +65,19 @@ extern "C" {
 #endif // _WIN32
 
 typedef std::string wdmString;
+template<class T> inline const char* wdmTypename();
 template<class T> inline bool wdmParse(const char *text, T &value);
 template<class T> inline size_t wdmStringnize(char *text, size_t len, T value);
+
+template<> inline const char* wdmTypename<int8_t >() { return "int8"; }
+template<> inline const char* wdmTypename<int16_t>() { return "int16"; }
+template<> inline const char* wdmTypename<int32_t>() { return "int32"; }
+template<> inline const char* wdmTypename<uint8_t >(){ return "uint8"; }
+template<> inline const char* wdmTypename<uint16_t>(){ return "uint16"; }
+template<> inline const char* wdmTypename<uint32_t>(){ return "uint32"; }
+template<> inline const char* wdmTypename<bool>()    { return "bool"; }
+template<> inline const char* wdmTypename<float>()   { return "float32"; }
+template<> inline const char* wdmTypename<double>()  { return "float64"; }
 
 template<> inline bool wdmParse(const char *text, int8_t  &value)  { return sscanf(text, "%hhi", &value)==1; }
 template<> inline bool wdmParse(const char *text, int16_t &value)  { return sscanf(text, "%hi", &value)==1; }
@@ -178,7 +189,28 @@ public:
         m_name = len!=0 ? wdmString(name, len) : name;
     }
     virtual void    setParent(wdmNode *parent)  { m_parent=parent; }
-    virtual size_t  stringnizeValue(char *out, size_t len) const{ return 0; }
+
+    size_t jsonizeChildren(char *out, size_t len) const
+    {
+        if(m_children.empty()) { return 0; }
+        size_t s = 0;
+        s += snprintf(out+s, len-s, "\"children\": [");
+        for(size_t i=0; i<getNumChildren(); ++i) {
+            s += getChild(i)->jsonize(out+s, len-s);
+            if(i+1!=getNumChildren()) { s += snprintf(out+s, len-s, ", "); }
+        }
+        s += snprintf(out+s, len-s, "]");
+        return s;
+    }
+
+    virtual size_t  jsonize(char *out, size_t len) const
+    {
+        size_t s = 0;
+        s += snprintf(out+s, len-s, "{\"name\":\"%s\", ", getName());
+        s += jsonizeChildren(out+s, len-s);
+        s += snprintf(out+s, len-s, "}");
+        return s;
+    }
 
     virtual bool handleEvent(const wdmEvent &evt)
     {
@@ -211,9 +243,15 @@ public:
 
     wdmDataNode(T *value) : m_value(value) {}
 
-    virtual size_t stringnizeValue(char *out, size_t len) const
+    virtual size_t jsonize(char *out, size_t len) const
     {
-        return wdmStringnize(out, len, *m_value);
+        size_t s = 0;
+        s += snprintf(out+s, len-s, "{\"name\":\"%s\", \"type\":\"%s\", \"value\":", getName(), wdmTypename<T>());
+        s += wdmStringnize(out+s, len-s, *m_value);
+        s += snprintf(out+s, len-s, ", ");
+        s += jsonizeChildren(out+s, len-s);
+        s += snprintf(out+s, len-s, "}");
+        return s+super::jsonize(out+s, len-s);
     }
 
     virtual bool handleEvent(const wdmEvent &evt)
@@ -246,9 +284,15 @@ public:
         , m_setter(setter)
     {}
 
-    virtual size_t stringnizeValue(char *out, size_t len) const
+    virtual size_t jsonize(char *out, size_t len) const
     {
-        return wdmStringnize(out, len, m_getter());
+        size_t s = 0;
+        s += snprintf(out+s, len-s, "{\"name\":\"%s\", \"type\":\"%s\", \"value\":", getName(), wdmTypename<T>());
+        s += wdmStringnize(out+s, len-s, m_getter());
+        s += snprintf(out+s, len-s, ", ");
+        s += jsonizeChildren(out+s, len-s);
+        s += snprintf(out+s, len-s, "}");
+        return s+super::jsonize(out+s, len-s);
     }
 
     virtual bool handleEvent(const wdmEvent &evt)
