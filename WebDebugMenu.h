@@ -20,13 +20,13 @@
 
 
 typedef uint32_t wdmID;
-struct wdmIntermodule wdmEvent
+struct wdmEvent
 {
     wdmID node;
     const char *command;
 };
 
-class wdmIntermodule wdmNode
+class wdmNode
 {
 protected:
     virtual             ~wdmNode() {}
@@ -34,10 +34,12 @@ public:
     virtual void        release()=0;
     virtual wdmID       getID() const=0;
     virtual const char* getName() const=0;
-    virtual size_t      getNumChildren()=0;
-    virtual wdmNode*    getChild(size_t i)=0;
-    virtual void        addChild(wdmNode *child)=0;
+    virtual size_t      getNumChildren() const=0;
+    virtual wdmNode*    findChild(const char *name) const=0;
+    virtual wdmNode*    getChild(size_t i) const=0;
+    virtual void        addChild(const char *path, wdmNode *child)=0;
     virtual void        eraseChild(wdmNode *child)=0;
+    virtual void        setName(const char *name, size_t len=0)=0;
     virtual void        setParent(wdmNode *parent)=0;
     virtual size_t      stringnizeValue(char *out, size_t len) const=0;
     virtual bool        handleEvent(const wdmEvent &evt)=0;
@@ -50,8 +52,7 @@ extern "C" {
 
     // 以下は内部実装用
     wdmIntermodule wdmID    _wdmGenerateID();
-    wdmIntermodule wdmNode* _wdmFindNode(const char *path);
-    wdmIntermodule wdmNode* _wdmCreateNode(const char *path);
+    wdmIntermodule wdmNode* _wdmGetRootNode();
     wdmIntermodule void     _wdmRegisterNode(wdmNode *node);
     wdmIntermodule void     _wdmUnregisterNode(wdmNode *node);
 };
@@ -87,6 +88,9 @@ template<> inline size_t wdmStringnize(char *text, size_t len, bool value)     {
 template<> inline size_t wdmStringnize(char *text, size_t len, float value)    { return snprintf(text, len, "%f", value); }
 template<> inline size_t wdmStringnize(char *text, size_t len, double value)   { return snprintf(text, len, "%lf", value); }
 
+
+
+
 class wdmNodeBase : public wdmNode
 {
 protected:
@@ -98,7 +102,29 @@ protected:
     }
 
 public:
-    typedef std::vector<wdmNode*> children_cont;
+    typedef std::function<void ()>  exec_t;
+
+    struct wdmEqualName
+    {
+        const char *m_name;
+        size_t m_len;
+        wdmEqualName(const char *name, size_t len) : m_name(name), m_len(len) {}
+        bool operator()(const wdmNode *a) const
+        {
+            const char *name = a->getName();
+            size_t len = strlen(name);
+            return len==m_len && strncmp(name, m_name, len)==0;
+        }
+    };
+    static inline size_t wdmFindSeparator(const char *s)
+    {
+        size_t i=0;
+        for(;; ++i) {
+            if(s[i]=='/' || s[i]=='\0') { break; }
+        }
+        return i;
+    }
+    typedef std::vector<wdmNode*> node_cont;
 
     wdmNodeBase()
         : m_parent(NULL)
@@ -111,30 +137,79 @@ public:
 
     virtual wdmID       getID() const               { return m_id; }
     virtual const char* getName() const             { return m_name.c_str(); }
-    virtual size_t      getNumChildren()            { return m_children.size(); }
-    virtual wdmNode*    getChild(size_t i)          { return m_children[i]; }
-    virtual void        addChild(wdmNode *child)    { m_children.push_back(child); child->setParent(this); }
-    virtual void        eraseChild(wdmNode *child)  { m_children.erase(std::find(m_children.begin(), m_children.end(), child)); }
-    virtual void        setParent(wdmNode *parent)  { m_parent=parent; }
+    virtual size_t      getNumChildren() const      { return m_children.size(); }
+    virtual wdmNode*    getChild(size_t i) const    { return m_children[i]; }
 
-    virtual size_t      stringnizeValue(char *out, size_t len) const{ return 0; }
-    virtual bool        handleEvent(const wdmEvent &evt)            { return false; }
+    virtual wdmNode* findChild(const char *path) const
+    {
+        size_t s = wdmFindSeparator(path);
+        node_cont::const_iterator i=std::find_if(m_children.begin(), m_children.end(), wdmEqualName(path, s));
+        wdmNode *c = i==m_children.end() ? NULL : *i;
+        return path[s]=='/' ? c->findChild(path+s+1) : c;
+    }
+
+
+    virtual void addChild(const char *path, wdmNode *child)
+    {
+        size_t s = wdmFindSeparator(path);
+        node_cont::const_iterator i=std::find_if(m_children.begin(), m_children.end(), wdmEqualName(path, s));
+        wdmNode *n = i==m_children.end() ? NULL : *i;
+        if(path[s]=='/') {
+            if(n==NULL) {
+                n = new wdmNodeBase();
+                n->setName(path, s);
+                n->setParent(this);
+                m_children.push_back(n);
+            }
+            n->addChild(path+s+1, child);
+        }
+        else {
+            // 同名ノードがある場合、古いのは削除
+            if(n!=NULL) { n->release(); }
+            child->setName(path);
+            child->setParent(this);
+            m_children.push_back(child);
+        }
+    }
+
+    virtual void    eraseChild(wdmNode *child)  { m_children.erase(std::find(m_children.begin(), m_children.end(), child)); }
+    virtual void    setName(const char *name, size_t len=0)
+    {
+        m_name = len!=0 ? wdmString(name, len) : name;
+    }
+    virtual void    setParent(wdmNode *parent)  { m_parent=parent; }
+    virtual size_t  stringnizeValue(char *out, size_t len) const{ return 0; }
+
+    virtual bool handleEvent(const wdmEvent &evt)
+    {
+        if(strncmp(evt.command, "exec()", 6)==0) {
+            if(m_exec) {
+                m_exec();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void setCommand(exec_t exec) { m_exec=exec; }
 
 private:
-    children_cont m_children;
+    node_cont m_children;
     wdmNode *m_parent;
     wdmID m_id;
     wdmString m_name;
+    exec_t   m_exec;
 };
 
 
 template<class T>
 class wdmDataNode : public wdmNodeBase
 {
+typedef wdmNodeBase super;
 public:
     typedef std::function<void ()>  command_t;
 
-    wdmDataNode() : m_value(NULL) {}
+    wdmDataNode(T *value) : m_value(value) {}
 
     virtual size_t stringnizeValue(char *out, size_t len) const
     {
@@ -143,7 +218,14 @@ public:
 
     virtual bool handleEvent(const wdmEvent &evt)
     {
-        return false;
+        if(strncmp(evt.command, "set(", 4)==0) {
+            T tmp;
+            if(wdmParse(evt.command+4, tmp)) {
+                *m_value = tmp;
+                return true;
+            }
+        }
+        return super::handleEvent(evt);
     }
 
 private:
@@ -154,12 +236,15 @@ private:
 template<class T>
 class wdmPropertyNode : public wdmNodeBase
 {
+typedef wdmNodeBase super;
 public:
-    typedef std::function<void ()>  command_t;
     typedef std::function<T ()>     getter_t;
     typedef std::function<void (T)> setter_t;
 
-    wdmPropertyNode() {}
+    wdmPropertyNode(getter_t getter, setter_t setter)
+        : m_getter(getter)
+        , m_setter(setter)
+    {}
 
     virtual size_t stringnizeValue(char *out, size_t len) const
     {
@@ -168,7 +253,14 @@ public:
 
     virtual bool handleEvent(const wdmEvent &evt)
     {
-        return false;
+        if(strncmp(evt.command, "set(", 4)==0) {
+            T tmp;
+            if(wdmParse(evt.command+4, tmp)) {
+                m_setter(tmp);
+                return true;
+            }
+        }
+        return super::handleEvent(evt);
     }
 
 private:
@@ -179,22 +271,43 @@ private:
 
 
 
-inline wdmString wdmFormat(const char *fmt, ...);
+inline wdmString wdmFormat(const char *fmt, ...)
+{
+    char buf[1024];
+    va_list vl;
+    va_start(vl, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, vl);
+    va_end(vl);
+    return buf;
+}
 
 template<class T>
-inline wdmNode* wdmAddNode(const wdmString &path, T *value);
+inline void wdmAddDataNode(const wdmString &path, T *value)
+{
+    wdmDataNode *n = new wdmDataNode<T>(value);
+    _wdmGetRootNode()->addChild(path.c_str(), n);
+}
 
 template<class T>
-inline wdmNode* wdmAddNode(const wdmString &path, std::function<T ()> getter, std::function<void (T)> setter);
+inline void wdmAddPropertyNode(const wdmString &path, std::function<T ()> getter, std::function<void (T)> setter)
+{
+    wdmDataNode *n = new wdmDataNode<T>(getter, setter);
+    _wdmGetRootNode()->addChild(path.c_str(), n);
+};
 
-inline void wdmEraseNode(const wdmString &path);
+inline void wdmEraseNode(const wdmString &path)
+{
+    wdmNode *n = _wdmGetRootNode()->findChild(path.c_str());
+    if(n!=NULL) { n->release(); }
+};
 
 #else // wdmDisable
 
 #define wdmInitialize(...)
 #define wdmFinalize(...)
 #define wdmFlush(...)
-#define wdmAddNode(...)
+#define wdmAddDataNode(...)
+#define wdmAddPropertyNode(...)
 #define wdmEraseNode(...)
 
 #endif // wdmDisable
