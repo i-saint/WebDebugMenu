@@ -4,7 +4,7 @@
 <title>WebDebugMenu</title>
 
  <style type="text/css">
- .data_cell {margin:2px 2px 2px 10px;}
+ .data_children {margin:2px 2px 2px 10px;}
  </style>
 
 <script type="text/javascript" src="prototype.js"></script>
@@ -137,10 +137,9 @@ function toggleVisibility(id)
 
 function handleChange(id)
 {
-    var dataType = $("dataType"+id).innerText;
     var data = $("data"+id);
     var value;
-    if(dataType=="(bool)") {
+    if(data.type=="checkbox") {
         value = data.checked ? 1 : 0;
     }
     else {
