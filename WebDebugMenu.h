@@ -80,23 +80,23 @@ template<> inline const char* wdmTypename<bool>()    { return "bool"; }
 template<> inline const char* wdmTypename<float>()   { return "float32"; }
 template<> inline const char* wdmTypename<double>()  { return "float64"; }
 
-template<> inline bool wdmParse(const char *text, int8_t  &value)  { return sscanf(text, "%hhi", &value)==1; }
-template<> inline bool wdmParse(const char *text, int16_t &value)  { return sscanf(text, "%hi", &value)==1; }
-template<> inline bool wdmParse(const char *text, int32_t &value)  { return sscanf(text, "%i", &value)==1; }
-template<> inline bool wdmParse(const char *text, uint8_t  &value) { return sscanf(text, "%hhu", &value)==1; }
-template<> inline bool wdmParse(const char *text, uint16_t &value) { return sscanf(text, "%hu", &value)==1; }
-template<> inline bool wdmParse(const char *text, uint32_t &value) { return sscanf(text, "%u", &value)==1; }
-template<> inline bool wdmParse(const char *text, bool &value)     { return sscanf(text, "%hhi", &value)==1; }
+template<> inline bool wdmParse(const char *text, int8_t  &value)  { int32_t t;  if(sscanf(text, "%i", &t)==1){ value=t; return true; } return false; }
+template<> inline bool wdmParse(const char *text, int16_t &value)  { int32_t t;  if(sscanf(text, "%i", &t)==1){ value=t; return true; } return false; }
+template<> inline bool wdmParse(const char *text, int32_t &value)  { int32_t t;  if(sscanf(text, "%i", &t)==1){ value=t; return true; } return false; }
+template<> inline bool wdmParse(const char *text, uint8_t  &value) { uint32_t t; if(sscanf(text, "%u", &t)==1){ value=t; return true; } return false; }
+template<> inline bool wdmParse(const char *text, uint16_t &value) { uint32_t t; if(sscanf(text, "%u", &t)==1){ value=t; return true; } return false; }
+template<> inline bool wdmParse(const char *text, uint32_t &value) { uint32_t t; if(sscanf(text, "%u", &t)==1){ value=t; return true; } return false; }
+template<> inline bool wdmParse(const char *text, bool &value)     { int32_t t;  if(sscanf(text, "%i", &t)==1){ value=t; return true; } return false; }
 template<> inline bool wdmParse(const char *text, float &value)    { return sscanf(text, "%f", &value)==1; }
 template<> inline bool wdmParse(const char *text, double &value)   { return sscanf(text, "%lf", &value)==1; }
 
-template<> inline size_t wdmStringnize(char *text, size_t len, int8_t  value)  { return snprintf(text, len, "%i", value); }
-template<> inline size_t wdmStringnize(char *text, size_t len, int16_t value)  { return snprintf(text, len, "%i", value); }
+template<> inline size_t wdmStringnize(char *text, size_t len, int8_t  value)  { return snprintf(text, len, "%hhi", value); }
+template<> inline size_t wdmStringnize(char *text, size_t len, int16_t value)  { return snprintf(text, len, "%hi", value); }
 template<> inline size_t wdmStringnize(char *text, size_t len, int32_t value)  { return snprintf(text, len, "%i", value); }
-template<> inline size_t wdmStringnize(char *text, size_t len, uint8_t  value) { return snprintf(text, len, "%i", value); }
-template<> inline size_t wdmStringnize(char *text, size_t len, uint16_t value) { return snprintf(text, len, "%i", value); }
-template<> inline size_t wdmStringnize(char *text, size_t len, uint32_t value) { return snprintf(text, len, "%i", value); }
-template<> inline size_t wdmStringnize(char *text, size_t len, bool value)     { return snprintf(text, len, "%i", value); }
+template<> inline size_t wdmStringnize(char *text, size_t len, uint8_t  value) { return snprintf(text, len, "%hhu", value); }
+template<> inline size_t wdmStringnize(char *text, size_t len, uint16_t value) { return snprintf(text, len, "%hu", value); }
+template<> inline size_t wdmStringnize(char *text, size_t len, uint32_t value) { return snprintf(text, len, "%u", value); }
+template<> inline size_t wdmStringnize(char *text, size_t len, bool value)     { return snprintf(text, len, "%hhi", value); }
 template<> inline size_t wdmStringnize(char *text, size_t len, float value)    { return snprintf(text, len, "%f", value); }
 template<> inline size_t wdmStringnize(char *text, size_t len, double value)   { return snprintf(text, len, "%lf", value); }
 

@@ -18,7 +18,6 @@ var node_timer;
 function createIntControl(div, data)
 {
     var i = document.createElement("input");
-    i.setAttribute("id", "data"+data.id);
     i.setAttribute("type", "text");
     i.setAttribute("value", data.value.toString());
     div.appendChild(i);
@@ -28,10 +27,9 @@ function createIntControl(div, data)
 function createBoolControl(div, data)
 {
     var i = document.createElement("input");
-    i.setAttribute("id", "data"+data.id);
     i.setAttribute("type", "checkbox");
     if(data.value!=0) {
-        i.setAttribute("checked", "");
+        i.setAttribute("checked", true);
     }
     div.appendChild(i);
     return i;
@@ -40,7 +38,6 @@ function createBoolControl(div, data)
 function createFloatControl(div, data)
 {
     var i = document.createElement("input");
-    i.setAttribute("id", "data"+data.id);
     i.setAttribute("type", "text");
     i.setAttribute("value", data.value.toString());
     div.appendChild(i);
@@ -65,13 +62,22 @@ function getOrCreateNode(div, data)
         node = document.createElement("div");
         node.setAttribute("class", "data_cell");
         node.setAttribute("id", "node"+data.id);
+        node.setAttribute("dataType", data.type);
         div.appendChild(node);
+
         var name = document.createElement("span");
-        var text = document.createTextNode(data.name);
-        name.appendChild(text);
+        name.appendChild(document.createTextNode(data.name));
         node.appendChild(name);
+
         if(data.type!=null) {
-            createControlFuncs[data.type](node, data);
+            var dataType = document.createElement("span");
+            dataType.setAttribute("id", "dataType"+data.id);
+            dataType.appendChild(document.createTextNode("("+data.type+")"));
+            node.appendChild(dataType);
+
+            var inp = createControlFuncs[data.type](node, data);
+            inp.setAttribute("id", "data"+data.id);
+            inp.setAttribute("onchange", "handleChange("+data.id+")");
         }
     }
     return node;
@@ -102,12 +108,26 @@ function updateNodeData()
 
 }
 
-function postCommand(url, values)
+function handleChange(id)
+{
+    var dataType = $("dataType"+id).innerText;
+    var data = $("data"+id);
+    var value;
+    if(dataType=="(bool)") {
+        value = data.checked ? 1 : 0;
+    }
+    else {
+        value = data.value;
+    }
+    postCommand(id.toString()+"->set("+value+")");
+}
+
+function postCommand(values)
 {
     var ajax = new Ajax.Request("/command",
     {
         method: "post",
-        parameters: values,
+        parameters: "command="+values,
         onComplete: function(res) {
         }
     });
