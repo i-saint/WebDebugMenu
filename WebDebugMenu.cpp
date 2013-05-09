@@ -113,7 +113,7 @@ private:
 };
 
 
-const char s_root_dir[] = "html";
+const char s_root_dir[] = "wdmroot";
 
 struct MIME { const char *ext; const char *type; };
 static const MIME s_mime_types[] = {

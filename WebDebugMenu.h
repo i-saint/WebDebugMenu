@@ -331,12 +331,13 @@ inline void wdmAddDataNode(const wdmString &path, T *value)
     _wdmGetRootNode()->addChild(path.c_str(), n);
 }
 
-template<class T>
-inline void wdmAddPropertyNode(const wdmString &path, std::function<T ()> getter, std::function<void (T)> setter)
+template<class T, class C, class Getter, class Setter>
+inline void _wdmAddPropertyNode(const wdmString &path, C *_this, Getter getter, Setter setter)
 {
-    auto *n = new wdmDataNode<T>(getter, setter);
+    auto *n = new wdmPropertyNode<T>(std::bind(getter, _this), std::bind(setter, _this, std::placeholders::_1));
     _wdmGetRootNode()->addChild(path.c_str(), n);
 };
+#define wdmAddPropertyNode(Path, This, Getter, Setter, Type) _wdmAddPropertyNode<Type>(Path, This, Getter, Setter)
 
 inline void wdmEraseNode(const wdmString &path)
 {
