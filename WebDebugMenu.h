@@ -6,6 +6,7 @@
 #include <map>
 #include <algorithm>
 #include <functional>
+#include <cstdarg>
 #include <intrin.h>
 #include <stdint.h>
 
@@ -159,7 +160,6 @@ public:
         return path[s]=='/' ? c->findChild(path+s+1) : c;
     }
 
-
     virtual void addChild(const char *path, wdmNode *child)
     {
         size_t s = wdmFindSeparator(path);
@@ -192,7 +192,6 @@ public:
 
     size_t jsonizeChildren(char *out, size_t len) const
     {
-        if(m_children.empty()) { return 0; }
         size_t s = 0;
         s += snprintf(out+s, len-s, "\"children\": [");
         for(size_t i=0; i<getNumChildren(); ++i) {
@@ -206,7 +205,7 @@ public:
     virtual size_t  jsonize(char *out, size_t len) const
     {
         size_t s = 0;
-        s += snprintf(out+s, len-s, "{\"name\":\"%s\", ", getName());
+        s += snprintf(out+s, len-s, "{\"id\":%d, \"name\":\"%s\", ", getID(), getName());
         s += jsonizeChildren(out+s, len-s);
         s += snprintf(out+s, len-s, "}");
         return s;
@@ -246,12 +245,12 @@ public:
     virtual size_t jsonize(char *out, size_t len) const
     {
         size_t s = 0;
-        s += snprintf(out+s, len-s, "{\"name\":\"%s\", \"type\":\"%s\", \"value\":", getName(), wdmTypename<T>());
+        s += snprintf(out+s, len-s, "{\"id\":%d, \"name\":\"%s\", \"type\":\"%s\", \"value\":", getID(), getName(), wdmTypename<T>());
         s += wdmStringnize(out+s, len-s, *m_value);
         s += snprintf(out+s, len-s, ", ");
         s += jsonizeChildren(out+s, len-s);
         s += snprintf(out+s, len-s, "}");
-        return s+super::jsonize(out+s, len-s);
+        return s;
     }
 
     virtual bool handleEvent(const wdmEvent &evt)
@@ -287,12 +286,12 @@ public:
     virtual size_t jsonize(char *out, size_t len) const
     {
         size_t s = 0;
-        s += snprintf(out+s, len-s, "{\"name\":\"%s\", \"type\":\"%s\", \"value\":", getName(), wdmTypename<T>());
+        s += snprintf(out+s, len-s, "{\"id\":%d, \"name\":\"%s\", \"type\":\"%s\", \"value\":", getID(), getName(), wdmTypename<T>());
         s += wdmStringnize(out+s, len-s, m_getter());
         s += snprintf(out+s, len-s, ", ");
         s += jsonizeChildren(out+s, len-s);
         s += snprintf(out+s, len-s, "}");
-        return s+super::jsonize(out+s, len-s);
+        return s;
     }
 
     virtual bool handleEvent(const wdmEvent &evt)
@@ -328,14 +327,14 @@ inline wdmString wdmFormat(const char *fmt, ...)
 template<class T>
 inline void wdmAddDataNode(const wdmString &path, T *value)
 {
-    wdmDataNode *n = new wdmDataNode<T>(value);
+    auto *n = new wdmDataNode<T>(value);
     _wdmGetRootNode()->addChild(path.c_str(), n);
 }
 
 template<class T>
 inline void wdmAddPropertyNode(const wdmString &path, std::function<T ()> getter, std::function<void (T)> setter)
 {
-    wdmDataNode *n = new wdmDataNode<T>(getter, setter);
+    auto *n = new wdmDataNode<T>(getter, setter);
     _wdmGetRootNode()->addChild(path.c_str(), n);
 };
 

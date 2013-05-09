@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>WebDebugMenu</title>
+
+ <style type="text/css">
+ .data_cell {margin:2px 2px 2px 10px;}
+ </style>
+
+<script type="text/javascript" src="prototype.js"></script>
+<script type="text/javascript">
+
+var node_data = new Object();
+var node_loading = false;
+var node_timer;
+
+
+function createIntControl(div, data)
+{
+    var i = document.createElement("input");
+    i.setAttribute("id", "data"+data.id);
+    i.setAttribute("type", "text");
+    i.setAttribute("value", data.value.toString());
+    div.appendChild(i);
+    return i;
+}
+
+function createBoolControl(div, data)
+{
+    var i = document.createElement("input");
+    i.setAttribute("id", "data"+data.id);
+    i.setAttribute("type", "checkbox");
+    if(data.value!=0) {
+        i.setAttribute("checked", "");
+    }
+    div.appendChild(i);
+    return i;
+}
+
+function createFloatControl(div, data)
+{
+    var i = document.createElement("input");
+    i.setAttribute("id", "data"+data.id);
+    i.setAttribute("type", "text");
+    i.setAttribute("value", data.value.toString());
+    div.appendChild(i);
+    return i;
+}
+
+var createControlFuncs = {
+    "int8":   createIntControl,
+    "int16":  createIntControl,
+    "int32":  createIntControl,
+    "uint8":  createIntControl,
+    "uint16": createIntControl,
+    "uint32": createIntControl,
+    "bool":   createBoolControl,
+    "float32":createFloatControl,
+    "float64":createFloatControl,
+}
+function getOrCreateNode(div, data)
+{
+    var node = $("node"+data.id);
+    if(node==null) {
+        node = document.createElement("div");
+        node.setAttribute("class", "data_cell");
+        node.setAttribute("id", "node"+data.id);
+        div.appendChild(node);
+        var name = document.createElement("span");
+        var text = document.createTextNode(data.name);
+        name.appendChild(text);
+        node.appendChild(name);
+        if(data.type!=null) {
+            createControlFuncs[data.type](node, data);
+        }
+    }
+    return node;
+}
+
+function updateDataGrid(div, data)
+{
+    var node = getOrCreateNode(div, data);
+    for(var i=0; i<data.children.length; ++i) {
+        updateDataGrid(node, data.children[i]);
+    }
+}
+
+function updateNodeData()
+{
+    if(node_loading) { return; }
+
+    node_loading = true;
+    var ajax = new Ajax.Request("/data",
+    {
+        method: "get",
+        onComplete: function(res) {
+            node_loading = false;
+            node_data = res.responseText.evalJSON();
+            updateDataGrid($("data_grid"), node_data);
+        }
+    });
+
+}
+
+function postCommand(url, values)
+{
+    var ajax = new Ajax.Request("/command",
+    {
+        method: "post",
+        parameters: values,
+        onComplete: function(res) {
+        }
+    });
+}
+
+function onLoad()
+{
+    updateNodeData();
+    clearInterval(node_timer);
+    node_timer = setInterval(updateNodeData, 3000);
+}
+</script>
+</head>
+
+<body onload="onLoad()">
+    <div id="data_grid"></div>
+</body>
+
+</html>

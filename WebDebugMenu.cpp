@@ -28,6 +28,7 @@
 
 #pragma comment(lib, "psapi.lib")
 #include <psapi.h>
+#include <regex>
 
 #define wdmEachBuiltinTypes(Template)\
     Template(int8_t)\
@@ -197,9 +198,17 @@ void EachInputValue(Poco::Net::HTTPServerRequest &request, const F &f)
     encoded_content.resize(size);
     stream.read(&encoded_content[0], size);
     Poco::URI::decode(encoded_content, content);
-    for(size_t i=5; i<content.size(); ++i) {
-        if(content[i-1]==',' || content[i-1]=='=') {
-            f(&content[i]);
+
+    std::regex reg("(\\d+)->([^;]+)");
+    std::cmatch m;
+    size_t pos = 0;
+    for(;;) {
+        if(std::regex_search(content.c_str()+pos, m, reg)) {
+            f(m[1].str().c_str(), m[2].str().c_str());
+            pos += m.position()+m.length();
+        }
+        else {
+            break;
         }
     }
 }
@@ -214,8 +223,9 @@ public:
     void handleRequest(Poco::Net::HTTPServerRequest &request, Poco::Net::HTTPServerResponse &response)
     {
         if(request.getURI()=="/command") {
-            EachInputValue(request, [&](const char *value){
-                // todo
+            EachInputValue(request, [&](const char *id, const char *command){
+                wdmEventData tmp = {std::atoi(id), command};
+                wdmSystem::getInstance()->addEvent(tmp);
             });
             response.setContentType("text/plain");
             response.setContentLength(2);
@@ -264,7 +274,7 @@ wdmSystem* wdmSystem::s_inst;
 void wdmSystem::createInstance()
 {
     if(s_inst==NULL) {
-        s_inst = new wdmSystem();
+        new wdmSystem();
     }
 }
 
@@ -285,6 +295,7 @@ wdmSystem::wdmSystem()
     , m_root(NULL)
     , m_server(NULL)
 {
+    s_inst = this;
     m_root = new wdmNodeBase();
     m_json.resize(1024*1024*16);
 
@@ -401,10 +412,10 @@ extern "C" {
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     if(fdwReason==DLL_PROCESS_ATTACH) {
-        wdmInitialize();
+        //wdmInitialize();
     }
     else if(fdwReason==DLL_PROCESS_DETACH) {
-        wdmFinalize();
+        //wdmFinalize();
     }
     return TRUE;
 }

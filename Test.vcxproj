@@ -18,11 +18,14 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Test.cpp" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{315A0660-7223-41CF-839C-69CF731F8F43}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>WebDebugMenuInjector</RootNamespace>
-    <ProjectName>WebDebugMenuInjector</ProjectName>
+    <ProjectName>Test</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -66,7 +69,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>external;$(DXSDK_DIR)include;$(IncludePath)</IncludePath>
     <LibraryPath>external\lib\win32;$(DXSDK_DIR)lib\x86;$(LibraryPath)</LibraryPath>
-    <TargetName>WebController</TargetName>
+    <TargetName>Test</TargetName>
     <OutDir>$(ProjectDir)\</OutDir>
     <IntDir>_tmp\$(ProjectName)_$(Platform)$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
@@ -104,7 +107,7 @@
       <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
@@ -122,7 +125,7 @@
       <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
@@ -140,7 +143,7 @@
       <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
     </Link>
     <PostBuildEvent>
@@ -157,7 +160,7 @@
       <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
     </Link>
     <PostBuildEvent>
