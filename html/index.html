@@ -62,8 +62,16 @@ function getOrCreateNode(div, data)
         node = document.createElement("div");
         node.setAttribute("class", "data_cell");
         node.setAttribute("id", "node"+data.id);
-        node.setAttribute("dataType", data.type);
         div.appendChild(node);
+
+        if(data.name!="" && data.children.length>0) {
+            var cross = document.createElement("span");
+            cross.setAttribute("id", "cross"+data.id);
+            cross.setAttribute("cross", "cross");
+            cross.setAttribute("onclick", "toggleVisibility("+data.id+")");
+            cross.appendChild(document.createTextNode("-"));
+            node.appendChild(cross);
+        }
 
         var name = document.createElement("span");
         name.appendChild(document.createTextNode(data.name));
@@ -79,15 +87,20 @@ function getOrCreateNode(div, data)
             inp.setAttribute("id", "data"+data.id);
             inp.setAttribute("onchange", "handleChange("+data.id+")");
         }
+
+        children = document.createElement("div");
+        children.setAttribute("class", "data_children");
+        children.setAttribute("id", "children"+data.id);
+        node.appendChild(children);
     }
     return node;
 }
 
-function updateDataGrid(div, data)
+function updateDataGrid(div, data, depth)
 {
     var node = getOrCreateNode(div, data);
     for(var i=0; i<data.children.length; ++i) {
-        updateDataGrid(node, data.children[i]);
+        updateDataGrid(node.lastChild, data.children[i], depth+1);
     }
 }
 
@@ -102,10 +115,24 @@ function updateNodeData()
         onComplete: function(res) {
             node_loading = false;
             node_data = res.responseText.evalJSON();
-            updateDataGrid($("data_grid"), node_data);
+            updateDataGrid($("data_grid"), node_data, 0);
         }
     });
 
+}
+
+function toggleVisibility(id)
+{
+    var children = $("node"+id).lastChild;
+    var cross = $("cross"+id);
+    if(children.style.display=="") {
+        children.style.display = "none";
+        cross.innerText = "+";
+    }
+    else {
+        children.style.display = "";
+        cross.innerText = "-";
+    }
 }
 
 function handleChange(id)
