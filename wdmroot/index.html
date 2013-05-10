@@ -21,7 +21,9 @@ var createInputFuncs = {
         i.setAttribute("class", "int8");
         i.setAttribute("type", "text");
         i.setAttribute("size", 4);
-        i.setValue = function(v) { this.value = v.toString(); }
+        i.setAttribute("onfocus", "this.lockUpdate=true");
+        i.setAttribute("onblur", "this.lockUpdate=false");
+        i.setValue = function(v) { if(!this.lockUpdate) this.value=v.toString(); }
         i.getValue = function() { return this.value; }
         return i;
     },
@@ -30,7 +32,9 @@ var createInputFuncs = {
         i.setAttribute("class", "int16");
         i.setAttribute("type", "text");
         i.setAttribute("size", 6);
-        i.setValue = function(v) { this.value = v.toString(); }
+        i.setAttribute("onfocus", "this.lockUpdate=true");
+        i.setAttribute("onblur", "this.lockUpdate=false");
+        i.setValue = function(v) { if(!this.lockUpdate) this.value=v.toString(); }
         i.getValue = function() { return this.value; }
         return i;
     },
@@ -39,7 +43,9 @@ var createInputFuncs = {
         i.setAttribute("class", "int32");
         i.setAttribute("type", "text");
         i.setAttribute("size", 10);
-        i.setValue = function(v) { this.value = v.toString(); }
+        i.setAttribute("onfocus", "this.lockUpdate=true");
+        i.setAttribute("onblur", "this.lockUpdate=false");
+        i.setValue = function(v) { if(!this.lockUpdate) this.value=v.toString(); }
         i.getValue = function() { return this.value; }
         return i;
     },
@@ -49,7 +55,9 @@ var createInputFuncs = {
         i.setAttribute("class", "uint8");
         i.setAttribute("type", "text");
         i.setAttribute("size", 4);
-        i.setValue = function(v) { this.value = v.toString(); }
+        i.setAttribute("onfocus", "this.lockUpdate=true");
+        i.setAttribute("onblur", "this.lockUpdate=false");
+        i.setValue = function(v) { if(!this.lockUpdate) this.value=v.toString(); }
         i.getValue = function() { return this.value; }
         return i;
     },
@@ -58,7 +66,9 @@ var createInputFuncs = {
         i.setAttribute("class", "uint16");
         i.setAttribute("type", "text");
         i.setAttribute("size", 6);
-        i.setValue = function(v) { this.value = v.toString(); }
+        i.setAttribute("onfocus", "this.lockUpdate=true");
+        i.setAttribute("onblur", "this.lockUpdate=false");
+        i.setValue = function(v) { if(!this.lockUpdate) this.value=v.toString(); }
         i.getValue = function() { return this.value; }
         return i;
     },
@@ -67,7 +77,9 @@ var createInputFuncs = {
         i.setAttribute("class", "uint32");
         i.setAttribute("type", "text");
         i.setAttribute("size", 10);
-        i.setValue = function(v) { this.value = v.toString(); }
+        i.setAttribute("onfocus", "this.lockUpdate=true");
+        i.setAttribute("onblur", "this.lockUpdate=false");
+        i.setValue = function(v) { if(!this.lockUpdate) this.value=v.toString(); }
         i.getValue = function() { return this.value; }
         return i;
     },
@@ -76,7 +88,9 @@ var createInputFuncs = {
         var i = document.createElement("input");
         i.setAttribute("class", "bool");
         i.setAttribute("type", "checkbox");
-        i.setValue = function(v) { this.checked = v!=0; }
+        i.setAttribute("onfocus", "this.lockUpdate=true");
+        i.setAttribute("onblur", "this.lockUpdate=false");
+        i.setValue = function(v) { if(!this.lockUpdate) this.checked=v!=0; }
         i.getValue = function() { return this.checked ? 1 : 0; }
         return i;
     },
@@ -86,7 +100,9 @@ var createInputFuncs = {
         i.setAttribute("class", "float32");
         i.setAttribute("type", "text");
         i.setAttribute("size", 10);
-        i.setValue = function(v) { this.value = v.toString(); }
+        i.setAttribute("onfocus", "this.lockUpdate=true");
+        i.setAttribute("onblur", "this.lockUpdate=false");
+        i.setValue = function(v) { if(!this.lockUpdate) this.value=v.toString(); }
         i.getValue = function() { return this.value; }
         return i;
     },
@@ -95,7 +111,9 @@ var createInputFuncs = {
         i.setAttribute("class", "float64");
         i.setAttribute("type", "text");
         i.setAttribute("size", 10);
-        i.setValue = function(v) { this.value = v.toString(); }
+        i.setAttribute("onfocus", "this.lockUpdate=true");
+        i.setAttribute("onblur", "this.lockUpdate=false");
+        i.setValue = function(v) { if(!this.lockUpdate) this.value=v.toString(); }
         i.getValue = function() { return this.value; }
         return i;
     },
@@ -308,14 +326,14 @@ var createControlFuncs = {
     //"float32x4x3":createFloatControl,
     //"float32x4x4":createFloatControl,
 }
-function getOrCreateNode(div, data)
+
+function getOrCreateNode(parent, data)
 {
     var node = $("node"+data.id);
     if(node==null) {
         node = document.createElement("div");
         node.setAttribute("class", "data_cell");
         node.setAttribute("id", "node"+data.id);
-        div.appendChild(node);
 
         if(data.name!="" && data.children.length>0) {
             var cross = document.createElement("span");
@@ -324,6 +342,7 @@ function getOrCreateNode(div, data)
             cross.setAttribute("onclick", "toggleVisibility("+data.id+")");
             cross.appendChild(document.createTextNode("-"));
             node.appendChild(cross);
+            node.toggleNode = cross;
         }
 
         var name = document.createElement("span");
@@ -339,7 +358,12 @@ function getOrCreateNode(div, data)
             var inp = createControlFuncs[data.type]();
             inp.setAttribute("id", "data"+data.id);
             for(var i=0; i<inp.children.length; ++i) {
-                inp.children[i].setAttribute("onchange", "handleChange("+data.id+")");
+                if(data.readonly) {
+                    inp.children[i].setAttribute("disabled", true);
+                }
+                else {
+                    inp.children[i].setAttribute("onchange", "handleChange("+data.id+")");
+                }
             }
             node.appendChild(inp);
             node.dataNode = inp;
@@ -356,6 +380,8 @@ function getOrCreateNode(div, data)
         children.setAttribute("class", "data_children");
         children.setAttribute("id", "children"+data.id);
         node.appendChild(children);
+        node.dataChildren = children;
+        parent.appendChild(node);
     }
     if(node.dataNode && data.value) {
         node.dataNode.setValue(data.value);
@@ -366,8 +392,35 @@ function getOrCreateNode(div, data)
 function updateDataGrid(div, data, depth)
 {
     var node = getOrCreateNode(div, data);
+    node.updated = true;
     for(var i=0; i<data.children.length; ++i) {
-        updateDataGrid(node.lastChild, data.children[i], depth+1);
+        updateDataGrid(node.dataChildren, data.children[i], depth+1);
+    }
+}
+
+function beforeUpdateData(node)
+{
+    if(node==null) { return; }
+    if(node.dataChildren) {
+        node.updated = false;
+        var children = node.dataChildren.children;
+        for(var i=0; i<children.length; ++i) {
+            beforeUpdateData(children[i]);
+        }
+    }
+}
+
+function afterUpdateData(node)
+{
+    if(node==null) { return; }
+    if(node.updated==false) {
+        node.parentNode.removeChild(node);
+    }
+    else {
+        var children = node.dataChildren.children;
+        for(var i=0; i<children.length; ++i) {
+            afterUpdateData(children[i]);
+        }
     }
 }
 
@@ -382,7 +435,10 @@ function updateNodeData()
         onComplete: function(res) {
             node_loading = false;
             node_data = res.responseText.evalJSON();
-            updateDataGrid($("data_grid"), node_data, 0);
+            var data_root = $("data_grid");
+            beforeUpdateData(data_root.children[0]);
+            updateDataGrid(data_root, node_data, 0);
+            afterUpdateData(data_root.children[0]);
         }
     });
 
