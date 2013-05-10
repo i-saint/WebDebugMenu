@@ -15,45 +15,298 @@ var node_loading = false;
 var node_timer;
 
 
-function createIntControl(div, data)
-{
-    var i = document.createElement("input");
-    i.setAttribute("type", "text");
-    i.setAttribute("value", data.value.toString());
-    div.appendChild(i);
-    return i;
-}
+var createInputFuncs = {
+    "int8": function(){
+        var i = document.createElement("input");
+        i.setAttribute("class", "int8");
+        i.setAttribute("type", "text");
+        i.setAttribute("size", 4);
+        i.setValue = function(v) { this.value = v.toString(); }
+        i.getValue = function() { return this.value; }
+        return i;
+    },
+    "int16": function(){
+        var i = document.createElement("input");
+        i.setAttribute("class", "int16");
+        i.setAttribute("type", "text");
+        i.setAttribute("size", 6);
+        i.setValue = function(v) { this.value = v.toString(); }
+        i.getValue = function() { return this.value; }
+        return i;
+    },
+    "int32": function(){
+        var i = document.createElement("input");
+        i.setAttribute("class", "int32");
+        i.setAttribute("type", "text");
+        i.setAttribute("size", 10);
+        i.setValue = function(v) { this.value = v.toString(); }
+        i.getValue = function() { return this.value; }
+        return i;
+    },
 
-function createBoolControl(div, data)
-{
-    var i = document.createElement("input");
-    i.setAttribute("type", "checkbox");
-    if(data.value!=0) {
-        i.setAttribute("checked", true);
-    }
-    div.appendChild(i);
-    return i;
-}
+    "uint8": function(){
+        var i = document.createElement("input");
+        i.setAttribute("class", "uint8");
+        i.setAttribute("type", "text");
+        i.setAttribute("size", 4);
+        i.setValue = function(v) { this.value = v.toString(); }
+        i.getValue = function() { return this.value; }
+        return i;
+    },
+    "uint16": function(){
+        var i = document.createElement("input");
+        i.setAttribute("class", "uint16");
+        i.setAttribute("type", "text");
+        i.setAttribute("size", 6);
+        i.setValue = function(v) { this.value = v.toString(); }
+        i.getValue = function() { return this.value; }
+        return i;
+    },
+    "uint32": function(){
+        var i = document.createElement("input");
+        i.setAttribute("class", "uint32");
+        i.setAttribute("type", "text");
+        i.setAttribute("size", 10);
+        i.setValue = function(v) { this.value = v.toString(); }
+        i.getValue = function() { return this.value; }
+        return i;
+    },
 
-function createFloatControl(div, data)
-{
-    var i = document.createElement("input");
-    i.setAttribute("type", "text");
-    i.setAttribute("value", data.value.toString());
-    div.appendChild(i);
-    return i;
+    "bool": function(){
+        var i = document.createElement("input");
+        i.setAttribute("class", "bool");
+        i.setAttribute("type", "checkbox");
+        i.setValue = function(v) { this.checked = v!=0; }
+        i.getValue = function() { return this.checked ? 1 : 0; }
+        return i;
+    },
+
+    "float32": function(){
+        var i = document.createElement("input");
+        i.setAttribute("class", "float32");
+        i.setAttribute("type", "text");
+        i.setAttribute("size", 10);
+        i.setValue = function(v) { this.value = v.toString(); }
+        i.getValue = function() { return this.value; }
+        return i;
+    },
+    "float64": function(){
+        var i = document.createElement("input");
+        i.setAttribute("class", "float64");
+        i.setAttribute("type", "text");
+        i.setAttribute("size", 10);
+        i.setValue = function(v) { this.value = v.toString(); }
+        i.getValue = function() { return this.value; }
+        return i;
+    },
 }
 
 var createControlFuncs = {
-    "int8":   createIntControl,
-    "int16":  createIntControl,
-    "int32":  createIntControl,
-    "uint8":  createIntControl,
-    "uint16": createIntControl,
-    "uint32": createIntControl,
-    "bool":   createBoolControl,
-    "float32":createFloatControl,
-    "float64":createFloatControl,
+    "int8": function() {
+        var d = document.createElement("span");
+        d.setAttribute("class", "int8");
+        d.appendChild(createInputFuncs.int8());
+        d.setValue = function(v) { this.children[0].setValue(v); }
+        d.getValue = function() { return this.children[0].getValue(); }
+        return d;
+    },
+    "int16": function() {
+        var d = document.createElement("span");
+        d.setAttribute("class", "int16");
+        d.appendChild(createInputFuncs.int16());
+        d.setValue = function(v) { this.children[0].setValue(v); }
+        d.getValue = function() { return this.children[0].getValue(); }
+        return d;
+    },
+    "int32": function() {
+        var d = document.createElement("span");
+        d.setAttribute("class", "int32");
+        d.appendChild(createInputFuncs.int32());
+        d.setValue = function(v) { this.children[0].setValue(v); }
+        d.getValue = function() { return this.children[0].getValue(); }
+        return d;
+    },
+
+
+    "uint8": function() {
+        var d = document.createElement("span");
+        d.setAttribute("class", "uint8");
+        d.appendChild(createInputFuncs.uint8());
+        d.setValue = function(v) { this.children[0].setValue(v); }
+        d.getValue = function() { return this.children[0].getValue(); }
+        return d;
+    },
+    "uint16": function() {
+        var d = document.createElement("span");
+        d.setAttribute("class", "uint16");
+        d.appendChild(createInputFuncs.uint16());
+        d.setValue = function(v) { this.children[0].setValue(v); }
+        d.getValue = function() { return this.children[0].getValue(); }
+        return d;
+    },
+    "uint32": function() {
+        var d = document.createElement("span");
+        d.setAttribute("class", "uint32");
+        d.appendChild(createInputFuncs.uint32());
+        d.setValue = function(v) { this.children[0].setValue(v); }
+        d.getValue = function() { return this.children[0].getValue(); }
+        return d;
+    },
+
+    "bool": function() {
+        var d = document.createElement("span");
+        d.setAttribute("class", "bool");
+        d.appendChild(createInputFuncs.bool());
+        d.setValue = function(v) { this.children[0].setValue(v); }
+        d.getValue = function() { return this.children[0].getValue(); }
+        return d;
+    },
+
+    "float32": function() {
+        var d = document.createElement("span");
+        d.setAttribute("class", "float32");
+        d.appendChild(createInputFuncs.float32());
+        d.setValue = function(v) { this.children[0].setValue(v); }
+        d.getValue = function() { return this.children[0].getValue(); }
+        return d;
+    },
+    "float64": function() {
+        var d = document.createElement("span");
+        d.setAttribute("class", "float64");
+        d.appendChild(createInputFuncs.float64());
+        d.setValue = function(v) { this.children[0].setValue(v); }
+        d.getValue = function() { return this.children[0].getValue(); }
+        return d;
+    },
+
+
+    "int32x2": function() {
+        var d = document.createElement("span");
+        d.setAttribute("class", "int32x2");
+        d.appendChild(createInputFuncs.int32());
+        d.appendChild(createInputFuncs.int32());
+        d.setValue = function(v) {
+            this.children[0].setValue(v[0]);
+            this.children[1].setValue(v[1]);
+        }
+        d.getValue = function() {
+            return "["+
+            this.children[0].getValue()+","+
+            this.children[1].getValue()+
+            "]";
+        }
+        return d;
+    },
+    "int32x3": function() {
+        var d = document.createElement("span");
+        d.setAttribute("class", "int32x3");
+        d.appendChild(createInputFuncs.int32());
+        d.appendChild(createInputFuncs.int32());
+        d.appendChild(createInputFuncs.int32());
+        d.setValue = function(v) {
+            this.children[0].setValue(v[0]);
+            this.children[1].setValue(v[1]);
+            this.children[2].setValue(v[2]);
+        }
+        d.getValue = function() {
+            return "["+
+            this.children[0].getValue()+","+
+            this.children[1].getValue()+","+
+            this.children[2].getValue()+
+            "]";
+        }
+        return d;
+    },
+    "int32x4": function() {
+        var d = document.createElement("span");
+        d.setAttribute("class", "int32x4");
+        d.appendChild(createInputFuncs.int32());
+        d.appendChild(createInputFuncs.int32());
+        d.appendChild(createInputFuncs.int32());
+        d.appendChild(createInputFuncs.int32());
+        d.setValue = function(v) {
+            this.children[0].setValue(v[0]);
+            this.children[1].setValue(v[1]);
+            this.children[2].setValue(v[2]);
+            this.children[3].setValue(v[3]);
+        }
+        d.getValue = function() {
+            return "["+
+            this.children[0].getValue()+","+
+            this.children[1].getValue()+","+
+            this.children[2].getValue()+","+
+            this.children[3].getValue()+
+            "]";
+        }
+        return d;
+    },
+
+
+    "float32x2": function() {
+        var d = document.createElement("span");
+        d.setAttribute("class", "float32x2");
+        d.appendChild(createInputFuncs.float32());
+        d.appendChild(createInputFuncs.float32());
+        d.setValue = function(v) {
+            this.children[0].setValue(v[0]);
+            this.children[1].setValue(v[1]);
+        }
+        d.getValue = function() {
+            return "["+
+            this.children[0].getValue()+","+
+            this.children[1].getValue()+
+            "]";
+        }
+        return d;
+    },
+    "float32x3": function() {
+        var d = document.createElement("span");
+        d.setAttribute("class", "float32x3");
+        d.appendChild(createInputFuncs.float32());
+        d.appendChild(createInputFuncs.float32());
+        d.appendChild(createInputFuncs.float32());
+        d.setValue = function(v) {
+            this.children[0].setValue(v[0]);
+            this.children[1].setValue(v[1]);
+            this.children[2].setValue(v[2]);
+        }
+        d.getValue = function() {
+            return "["+
+            this.children[0].getValue()+","+
+            this.children[1].getValue()+","+
+            this.children[2].getValue()+
+            "]";
+        }
+        return d;
+    },
+    "float32x4": function() {
+        var d = document.createElement("span");
+        d.setAttribute("class", "float32x4");
+        d.appendChild(createInputFuncs.float32());
+        d.appendChild(createInputFuncs.float32());
+        d.appendChild(createInputFuncs.float32());
+        d.appendChild(createInputFuncs.float32());
+        d.setValue = function(v) {
+            this.children[0].setValue(v[0]);
+            this.children[1].setValue(v[1]);
+            this.children[2].setValue(v[2]);
+            this.children[3].setValue(v[3]);
+        }
+        d.getValue = function() {
+            return "["+
+            this.children[0].getValue()+","+
+            this.children[1].getValue()+","+
+            this.children[2].getValue()+","+
+            this.children[3].getValue()+
+            "]";
+        }
+        return d;
+    },
+
+    //"float32x2x2":createFloatControl,
+    //"float32x3x3":createFloatControl,
+    //"float32x4x3":createFloatControl,
+    //"float32x4x4":createFloatControl,
 }
 function getOrCreateNode(div, data)
 {
@@ -83,9 +336,13 @@ function getOrCreateNode(div, data)
             dataType.appendChild(document.createTextNode("("+data.type+")"));
             node.appendChild(dataType);
 
-            var inp = createControlFuncs[data.type](node, data);
+            var inp = createControlFuncs[data.type]();
             inp.setAttribute("id", "data"+data.id);
-            inp.setAttribute("onchange", "handleChange("+data.id+")");
+            for(var i=0; i<inp.children.length; ++i) {
+                inp.children[i].setAttribute("onchange", "handleChange("+data.id+")");
+            }
+            node.appendChild(inp);
+            node.dataNode = inp;
         }
         if(data.callable) {
             var button = document.createElement("input");
@@ -99,6 +356,9 @@ function getOrCreateNode(div, data)
         children.setAttribute("class", "data_children");
         children.setAttribute("id", "children"+data.id);
         node.appendChild(children);
+    }
+    if(node.dataNode && data.value) {
+        node.dataNode.setValue(data.value);
     }
     return node;
 }
@@ -144,15 +404,7 @@ function toggleVisibility(id)
 
 function handleChange(id)
 {
-    var data = $("data"+id);
-    var value;
-    if(data.type=="checkbox") {
-        value = data.checked ? 1 : 0;
-    }
-    else {
-        value = data.value;
-    }
-    postCommand(id.toString()+"->set("+value+")");
+    postCommand(id.toString()+"->set(" + $("data"+id).getValue() + ")");
 }
 
 function handleCall(id)

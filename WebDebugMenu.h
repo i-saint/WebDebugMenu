@@ -126,13 +126,15 @@ template<> inline size_t wdmStringnize(char *text, size_t len, wdmFloat32x2 v) {
 template<> inline size_t wdmStringnize(char *text, size_t len, wdmFloat32x3 v) { return snprintf(text, len, "[%f,%f,%f]", v[0],v[1],v[2]); }
 template<> inline size_t wdmStringnize(char *text, size_t len, wdmFloat32x4 v) { return snprintf(text, len, "[%f,%f,%f,%f]", v[0],v[1],v[2],v[3]); }
 
-// simd
+// SSE
+#ifdef _INCLUDED_MM2
 template<> inline const char* wdmTypename<__m128i>() { return wdmTypename<wdmInt32x4  >(); }
 template<> inline const char* wdmTypename<__m128>()  { return wdmTypename<wdmFloat32x4>(); }
 template<> inline bool wdmParse(const char *text, __m128i &v) { return wdmParse<wdmInt32x4  >(text, (wdmInt32x4&)v); }
 template<> inline bool wdmParse(const char *text, __m128 &v)  { return wdmParse<wdmFloat32x4>(text, (wdmFloat32x4&)v); }
 template<> inline size_t wdmStringnize(char *text, size_t len, __m128i v) { return wdmStringnize<wdmInt32x4  >(text, len, (const wdmInt32x4&)v); }
 template<> inline size_t wdmStringnize(char *text, size_t len, __m128 v)  { return wdmStringnize<wdmFloat32x4>(text, len, (const wdmFloat32x4&)v); }
+#endif // _INCLUDED_MM2
 
 // glm
 #ifdef glm_glm

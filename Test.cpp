@@ -1,5 +1,6 @@
-﻿#include "WebDebugMenu.h"
-#include "windows.h"
+﻿#include "windows.h"
+#include "intrin.h"
+#include "WebDebugMenu.h"
 
 class Test
 {
@@ -9,10 +10,12 @@ public:
         , m_b(true)
         , m_f32(10.0f)
     {
+        m_m128 = _mm_set_ps(0.0f, 1.0f, 2.0f, 3.0f);
         wdmScope( wdmString p = wdmFormat("Test0x%p", this); );
         wdmAddNode(p+"/m_i32", &m_i32);
         wdmAddNode(p+"/m_b", &m_b);
         wdmAddNode(p+"/m_f32", &m_f32);
+        wdmAddNode(p+"/m_m128", &m_m128);
         wdmAddNode(p+"/print()", &Test::print, this);
     }
 
@@ -26,14 +29,17 @@ public:
         printf(
             "m_i32:%d\n"
             "m_b:%d\n"
-            "m_f32:%f\n",
-            m_i32, m_b, m_f32 );
+            "m_f32:%f\n"
+            "m_m128:[%f,%f,%f,%f]\n",
+            m_i32, m_b, m_f32,
+            m_m128.m128_f32[0], m_m128.m128_f32[1], m_m128.m128_f32[2], m_m128.m128_f32[3] );
     }
 
 private:
     int m_i32;
     bool m_b;
     float m_f32;
+    __m128 m_m128;
 };
 
 int main(int argc, char *argv[])
