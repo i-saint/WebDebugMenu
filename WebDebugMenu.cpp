@@ -30,24 +30,6 @@
 #include <psapi.h>
 #include <regex>
 
-#define wdmEachBuiltinTypes(Template)\
-    Template(int8_t)\
-    Template(int16_t)\
-    Template(int32_t)\
-    Template(uint8_t)\
-    Template(uint16_t)\
-    Template(uint32_t)\
-    Template(bool)\
-    Template(float)\
-    Template(double)
-
-#define Template(T)\
-    template wdmDataNode<T>;\
-    template wdmPropertyNode<T>;
-wdmEachBuiltinTypes(Template)
-#undef Template
-
-
 
 // std::string が dll を跨ぐと問題が起きる可能性があるため、
 // std::string を保持して dll を跨がない wdmEventData と、const char* だけ保持して dll 跨ぐ wdmEvent に分ける

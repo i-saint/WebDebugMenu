@@ -87,6 +87,13 @@ function getOrCreateNode(div, data)
             inp.setAttribute("id", "data"+data.id);
             inp.setAttribute("onchange", "handleChange("+data.id+")");
         }
+        if(data.callable) {
+            var button = document.createElement("input");
+            button.setAttribute("type", "button");
+            button.setAttribute("onclick", "handleCall("+data.id+")");
+            button.setAttribute("value", "call");
+            node.appendChild(button);
+        }
 
         children = document.createElement("div");
         children.setAttribute("class", "data_children");
@@ -146,6 +153,11 @@ function handleChange(id)
         value = data.value;
     }
     postCommand(id.toString()+"->set("+value+")");
+}
+
+function handleCall(id)
+{
+    postCommand(id.toString()+"->call()");
 }
 
 function postCommand(values)
