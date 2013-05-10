@@ -394,10 +394,8 @@ extern "C" {
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     if(fdwReason==DLL_PROCESS_ATTACH) {
-        //wdmInitialize();
     }
     else if(fdwReason==DLL_PROCESS_DETACH) {
-        //wdmFinalize();
     }
     return TRUE;
 }
