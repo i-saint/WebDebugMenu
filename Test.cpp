@@ -1,5 +1,5 @@
-﻿#include "windows.h"
-#include "intrin.h"
+﻿#include <windows.h>
+#include <intrin.h>
 #include "WebDebugMenu.h"
 
 class Test
@@ -28,8 +28,8 @@ public:
         wdmEraseNode(wdmFormat("Test0x%p", this));
     }
 
-    void setI32(int v) { m_i32=v; }
-    int getI32() const { return m_i32; }
+    void setI32(const int &v) { m_i32=v; }
+    const int& getI32() const { return m_i32; }
 
     void print() const
     {
