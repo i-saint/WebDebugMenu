@@ -18,6 +18,8 @@
 #   pragma comment(lib, "WebDebugMenu.lib")
 #endif
 
+// wdmEvent, wdmNode は dll を跨ぐ可能性がある
+// このため、これらは STL のコンテナなどには触れないようにする
 
 typedef uint32_t wdmID;
 struct wdmEvent
@@ -49,7 +51,7 @@ extern "C" {
     wdmIntermodule void     wdmFinalize();
     wdmIntermodule void     wdmFlush();
 
-    // 以下は内部実装用
+    // 内部実装用
     wdmIntermodule wdmID    _wdmGenerateID();
     wdmIntermodule wdmNode* _wdmGetRootNode();
     wdmIntermodule void     _wdmRegisterNode(wdmNode *node);
@@ -58,105 +60,17 @@ extern "C" {
 
 
 
-#ifdef _WIN32
+// 以下はユーザー側にのみ見え、WebDebugMenu.dll からは一切触れないコード
+
+#if defined(_WIN32) && !defined(snprintf)
 #define snprintf    _snprintf
 #define vsnprintf   _vsnprintf
-#endif // _WIN32
+#endif // defined(_WIN32) && !defined(snprintf)
 
 typedef std::string wdmString;
 template<class T> inline const char* wdmTypename();
 template<class T> inline bool wdmParse(const char *text, T &value);
 template<class T> inline size_t wdmToS(char *text, size_t len, T value);
-
-template<> inline const char* wdmTypename<int8_t >() { return "int8"; }
-template<> inline const char* wdmTypename<int16_t>() { return "int16"; }
-template<> inline const char* wdmTypename<int32_t>() { return "int32"; }
-template<> inline const char* wdmTypename<uint8_t >(){ return "uint8"; }
-template<> inline const char* wdmTypename<uint16_t>(){ return "uint16"; }
-template<> inline const char* wdmTypename<uint32_t>(){ return "uint32"; }
-template<> inline const char* wdmTypename<bool>()    { return "bool"; }
-template<> inline const char* wdmTypename<float>()   { return "float32"; }
-template<> inline const char* wdmTypename<double>()  { return "float64"; }
-
-template<> inline bool wdmParse(const char *text, int8_t  &v)  { int32_t t;  if(sscanf(text, "%i", &t)==1){ v=t; return true; } return false; }
-template<> inline bool wdmParse(const char *text, int16_t &v)  { int32_t t;  if(sscanf(text, "%i", &t)==1){ v=t; return true; } return false; }
-template<> inline bool wdmParse(const char *text, int32_t &v)  { int32_t t;  if(sscanf(text, "%i", &t)==1){ v=t; return true; } return false; }
-template<> inline bool wdmParse(const char *text, uint8_t  &v) { uint32_t t; if(sscanf(text, "%u", &t)==1){ v=t; return true; } return false; }
-template<> inline bool wdmParse(const char *text, uint16_t &v) { uint32_t t; if(sscanf(text, "%u", &t)==1){ v=t; return true; } return false; }
-template<> inline bool wdmParse(const char *text, uint32_t &v) { uint32_t t; if(sscanf(text, "%u", &t)==1){ v=t; return true; } return false; }
-template<> inline bool wdmParse(const char *text, bool &v)     { int32_t t;  if(sscanf(text, "%i", &t)==1){ v=t!=0; return true; } return false; }
-template<> inline bool wdmParse(const char *text, float &v)    { return sscanf(text, "%f", &v)==1; }
-template<> inline bool wdmParse(const char *text, double &v)   { return sscanf(text, "%lf", &v)==1; }
-
-template<> inline size_t wdmToS(char *text, size_t len, int8_t  v)  { return snprintf(text, len, "%i", (int32_t)v); }
-template<> inline size_t wdmToS(char *text, size_t len, int16_t v)  { return snprintf(text, len, "%i", (int32_t)v); }
-template<> inline size_t wdmToS(char *text, size_t len, int32_t v)  { return snprintf(text, len, "%i", v); }
-template<> inline size_t wdmToS(char *text, size_t len, uint8_t  v) { return snprintf(text, len, "%u", (uint32_t)v); }
-template<> inline size_t wdmToS(char *text, size_t len, uint16_t v) { return snprintf(text, len, "%u", (uint32_t)v); }
-template<> inline size_t wdmToS(char *text, size_t len, uint32_t v) { return snprintf(text, len, "%u", v); }
-template<> inline size_t wdmToS(char *text, size_t len, bool v)     { return snprintf(text, len, "%i", (int32_t)v); }
-template<> inline size_t wdmToS(char *text, size_t len, float v)    { return snprintf(text, len, "%f", v); }
-template<> inline size_t wdmToS(char *text, size_t len, double v)   { return snprintf(text, len, "%lf", v); }
-
-
-struct wdmInt32x2 { int v[2]; int& operator[](size_t i){return v[i];} };
-struct wdmInt32x3 { int v[3]; int& operator[](size_t i){return v[i];} };
-struct wdmInt32x4 { int v[4]; int& operator[](size_t i){return v[i];} };
-struct wdmFloat32x2 { float v[2]; float& operator[](size_t i){return v[i];} };
-struct wdmFloat32x3 { float v[3]; float& operator[](size_t i){return v[i];} };
-struct wdmFloat32x4 { float v[4]; float& operator[](size_t i){return v[i];} };
-
-template<> inline const char* wdmTypename<wdmInt32x2  >() { return "int32x2"; }
-template<> inline const char* wdmTypename<wdmInt32x3  >() { return "int32x3"; }
-template<> inline const char* wdmTypename<wdmInt32x4  >() { return "int32x4"; }
-template<> inline const char* wdmTypename<wdmFloat32x2>() { return "float32x2"; }
-template<> inline const char* wdmTypename<wdmFloat32x3>() { return "float32x3"; }
-template<> inline const char* wdmTypename<wdmFloat32x4>() { return "float32x4"; }
-template<> inline bool wdmParse(const char *text, wdmInt32x2   &v) { return sscanf(text, "[%d,%d]", &v[0],&v[1])==2; }
-template<> inline bool wdmParse(const char *text, wdmInt32x3   &v) { return sscanf(text, "[%d,%d,%d]", &v[0],&v[1],&v[2])==3; }
-template<> inline bool wdmParse(const char *text, wdmInt32x4   &v) { return sscanf(text, "[%d,%d,%d,%d]", &v[0],&v[1],&v[2],&v[3])==4; }
-template<> inline bool wdmParse(const char *text, wdmFloat32x2 &v) { return sscanf(text, "[%f,%f]", &v[0],&v[1])==2; }
-template<> inline bool wdmParse(const char *text, wdmFloat32x3 &v) { return sscanf(text, "[%f,%f,%f]", &v[0],&v[1],&v[2])==3; }
-template<> inline bool wdmParse(const char *text, wdmFloat32x4 &v) { return sscanf(text, "[%f,%f,%f,%f]", &v[0],&v[1],&v[2],&v[3])==4; }
-template<> inline size_t wdmToS(char *text, size_t len, wdmInt32x2   v) { return snprintf(text, len, "[%d,%d]", v[0],v[1]); }
-template<> inline size_t wdmToS(char *text, size_t len, wdmInt32x3   v) { return snprintf(text, len, "[%d,%d,%d]", v[0],v[1],v[2]); }
-template<> inline size_t wdmToS(char *text, size_t len, wdmInt32x4   v) { return snprintf(text, len, "[%d,%d,%d,%d]", v[0],v[1],v[2],v[3]); }
-template<> inline size_t wdmToS(char *text, size_t len, wdmFloat32x2 v) { return snprintf(text, len, "[%f,%f]", v[0],v[1]); }
-template<> inline size_t wdmToS(char *text, size_t len, wdmFloat32x3 v) { return snprintf(text, len, "[%f,%f,%f]", v[0],v[1],v[2]); }
-template<> inline size_t wdmToS(char *text, size_t len, wdmFloat32x4 v) { return snprintf(text, len, "[%f,%f,%f,%f]", v[0],v[1],v[2],v[3]); }
-
-// SSE
-#ifdef _INCLUDED_MM2
-template<> inline const char* wdmTypename<__m128i>() { return wdmTypename<wdmInt32x4  >(); }
-template<> inline const char* wdmTypename<__m128>()  { return wdmTypename<wdmFloat32x4>(); }
-template<> inline bool wdmParse(const char *text, __m128i &v) { return wdmParse<wdmInt32x4  >(text, (wdmInt32x4&)v); }
-template<> inline bool wdmParse(const char *text, __m128 &v)  { return wdmParse<wdmFloat32x4>(text, (wdmFloat32x4&)v); }
-template<> inline size_t wdmToS(char *text, size_t len, __m128i v) { return wdmToS<wdmInt32x4  >(text, len, (const wdmInt32x4&)v); }
-template<> inline size_t wdmToS(char *text, size_t len, __m128 v)  { return wdmToS<wdmFloat32x4>(text, len, (const wdmFloat32x4&)v); }
-#endif // _INCLUDED_MM2
-
-// glm
-#ifdef glm_glm
-template<> inline const char* wdmTypename<glm::ivec2>() { return wdmTypename<wdmInt32x2>(); }
-template<> inline const char* wdmTypename<glm::ivec3>() { return wdmTypename<wdmInt32x3>(); }
-template<> inline const char* wdmTypename<glm::ivec4>() { return wdmTypename<wdmInt32x4>(); }
-template<> inline const char* wdmTypename<glm::vec2 >() { return wdmTypename<wdmFloat32x2>(); }
-template<> inline const char* wdmTypename<glm::vec3 >() { return wdmTypename<wdmFloat32x3>(); }
-template<> inline const char* wdmTypename<glm::vec4 >() { return wdmTypename<wdmFloat32x4>(); }
-template<> inline bool wdmParse(const char *text, glm::ivec2 &v) { return wdmParse<wdmInt32x2  >(text, (wdmInt32x2&)v); }
-template<> inline bool wdmParse(const char *text, glm::ivec3 &v) { return wdmParse<wdmInt32x3  >(text, (wdmInt32x3&)v); }
-template<> inline bool wdmParse(const char *text, glm::ivec4 &v) { return wdmParse<wdmInt32x4  >(text, (wdmInt32x4&)v); }
-template<> inline bool wdmParse(const char *text, glm::vec2  &v) { return wdmParse<wdmFloat32x2>(text, (wdmFloat32x2&)v); }
-template<> inline bool wdmParse(const char *text, glm::vec3  &v) { return wdmParse<wdmFloat32x3>(text, (wdmFloat32x3&)v); }
-template<> inline bool wdmParse(const char *text, glm::vec4  &v) { return wdmParse<wdmFloat32x4>(text, (wdmFloat32x4&)v); }
-template<> inline size_t wdmToS(char *text, size_t len, glm::ivec2 v) { return wdmToS<wdmInt32x2  >(text, len, (const wdmInt32x2&)v); }
-template<> inline size_t wdmToS(char *text, size_t len, glm::ivec3 v) { return wdmToS<wdmInt32x3  >(text, len, (const wdmInt32x3&)v); }
-template<> inline size_t wdmToS(char *text, size_t len, glm::ivec4 v) { return wdmToS<wdmInt32x4  >(text, len, (const wdmInt32x4&)v); }
-template<> inline size_t wdmToS(char *text, size_t len, glm::vec2  v) { return wdmToS<wdmFloat32x2>(text, len, (const wdmFloat32x2&)v); }
-template<> inline size_t wdmToS(char *text, size_t len, glm::vec3  v) { return wdmToS<wdmFloat32x3>(text, len, (const wdmFloat32x3&)v); }
-template<> inline size_t wdmToS(char *text, size_t len, glm::vec4  v) { return wdmToS<wdmFloat32x4>(text, len, (const wdmFloat32x4&)v); }
-#endif // glm_glm
-
 
 class wdmNodeBase : public wdmNode
 {
@@ -290,8 +204,17 @@ private:
     wdmString m_name;
 };
 
+template<class T> struct wdmIsReadOnly { static const bool value=std::is_const<T>::value; };
+template<> struct wdmIsReadOnly<char*>   { static const bool value=true; };
+template<> struct wdmIsReadOnly<wchar_t*>{ static const bool value=true; };
 
-template<class T>
+template<class T> struct wdmCanBeRanged
+{
+    typedef typename std::remove_const<typename std::remove_reference<T>::type>::type value_t;
+    static const bool value = std::is_arithmetic<value_t>::value;
+};
+
+template<class T, bool valid=wdmCanBeRanged<T>::value>
 struct wdmRange
 {
     typedef typename std::remove_const<typename std::remove_reference<T>::type>::type value_t;
@@ -301,6 +224,24 @@ struct wdmRange
 
     wdmRange() : enabled(false), min_value(), max_value() {}
     wdmRange(T min_v, T max_v) : enabled(true), min_value(min_v), max_value(max_v) {}
+    size_t jsonize(char *out, size_t len) const
+    {
+        size_t s = 0;
+        if(enabled) {
+            s += snprintf(out+s, len-s, "\"range\":[");
+            s += wdmToS(out+s, len-s, min_value);
+            s += snprintf(out+s, len-s, ", ");
+            s += wdmToS(out+s, len-s, max_value);
+            s += snprintf(out+s, len-s, "], ");
+        }
+        return s;
+    }
+};
+template<class T>
+struct wdmRange<T, false>
+{
+    wdmRange() {}
+    size_t jsonize(char *out, size_t len) const { return 0; }
 };
 
 template<class T>
@@ -318,7 +259,7 @@ public:
     {
         size_t s = 0;
         s += snprintf(out+s, len-s, "{\"id\":%d, \"name\":\"%s\", \"type\":\"%s\",", getID(), getName(), wdmTypename<value_t>());
-        if(std::is_const<arg_t>::value) {
+        if(wdmIsReadOnly<arg_t>::value) {
             s += snprintf(out+s, len-s, "\"readonly\":true, ");
         }
         {
@@ -326,19 +267,14 @@ public:
             s += wdmToS(out+s, len-s, *m_value);
             s += snprintf(out+s, len-s, ", ");
         }
-        if(m_range.enabled) {
-            s += snprintf(out+s, len-s, "\"range\":[");
-            s += wdmToS(out+s, len-s, m_range.min_value);
-            s += snprintf(out+s, len-s, ", ");
-            s += wdmToS(out+s, len-s, m_range.max_value);
-            s += snprintf(out+s, len-s, "], ");
-        }
+        s += m_range.jsonize(out+s, len-s);
         s += jsonizeChildren(out+s, len-s);
         s += snprintf(out+s, len-s, "}");
         return s;
     }
 
-    template<class T> struct handleSet {
+    template<class T, bool readonly=wdmIsReadOnly<T>::value>
+    struct handleSet {
         bool operator()(const wdmEvent &evt, T *value)
         {
             if(strncmp(evt.command, "set(", 4)==0) {
@@ -351,11 +287,9 @@ public:
             return false;
         }
     };
-    template<class T> struct handleSet<const T> {
-        bool operator()(const wdmEvent &evt, const T *value)
-        {
-            return false;
-        }
+    template<class T>
+    struct handleSet<T, true> {
+        bool operator()(const wdmEvent &evt, const T *value) { return false; }
     };
     virtual bool handleEvent(const wdmEvent &evt)
     {
@@ -377,7 +311,7 @@ public:
     typedef typename std::remove_const<typename std::remove_reference<T>::type>::type value_t;
     typedef std::function<arg_t ()>     getter_t;
     typedef std::function<void (arg_t)> setter_t;
-    typedef wdmRange<T> range_t;
+    typedef wdmRange<value_t> range_t;
 
     wdmPropertyNode(getter_t getter=getter_t(), setter_t setter=setter_t(), const range_t &range=range_t())
         : m_getter(getter)
@@ -397,13 +331,7 @@ public:
             s += wdmToS(out+s, len-s, m_getter());
             s += snprintf(out+s, len-s, ", ");
         }
-        if(m_range.enabled) {
-            s += snprintf(out+s, len-s, "\"range\":[");
-            s += wdmToS(out+s, len-s, m_range.min_value);
-            s += snprintf(out+s, len-s, ", ");
-            s += wdmToS(out+s, len-s, m_range.max_value);
-            s += snprintf(out+s, len-s, "], ");
-        }
+        s += m_range.jsonize(out+s, len-s);
         s += jsonizeChildren(out+s, len-s);
         s += snprintf(out+s, len-s, "}");
         return s;
@@ -513,6 +441,7 @@ inline wdmString wdmFormat(const char *fmt, ...)
 
 #define wdmScope(...) __VA_ARGS__
 
+// data node
 template<class T>
 inline void wdmAddNode(const wdmString &path, T *value)
 {
@@ -524,6 +453,7 @@ inline void wdmAddNode(const wdmString &path, T *value, T min_value, T max_value
     _wdmGetRootNode()->addChild(path.c_str(), new wdmDataNode<T>(value, wdmRange<T>(min_value, max_value)));
 }
 
+// property node
 template<class C, class T>
 inline void wdmAddNode(const wdmString &path, C *_this, T (C::*getter)() const, void (C::*setter)(T))
 {
@@ -533,7 +463,7 @@ inline void wdmAddNode(const wdmString &path, C *_this, T (C::*getter)() const, 
 template<class C, class T, class T2>
 inline void wdmAddNode(const wdmString &path, C *_this, T (C::*getter)() const, void (C::*setter)(T), T2 min_value, T2 max_value)
 {
-    auto *n = new wdmPropertyNode<T>(std::bind(getter, _this), std::bind(setter, _this, std::placeholders::_1), wdmRange<T>(min_value, max_value));
+    auto *n = new wdmPropertyNode<T>(std::bind(getter, _this), std::bind(setter, _this, std::placeholders::_1), wdmRange<T2>(min_value, max_value));
     _wdmGetRootNode()->addChild(path.c_str(), n);
 }
 template<class C, class T>
@@ -543,6 +473,7 @@ inline void wdmAddNode(const wdmString &path, C *_this, T (C::*getter)() const)
     _wdmGetRootNode()->addChild(path.c_str(), n);
 }
 
+// function node (0 args)
 template<class R>
 inline void wdmAddNode(const wdmString &path, R (*f)())
 {
@@ -558,6 +489,7 @@ inline void wdmAddNode(const wdmString &path, R (C::*cmf)() const, const C *_thi
 {
     _wdmGetRootNode()->addChild( path.c_str(), new wdmFunctionNode0<R>(std::bind(cmf, _this)) );
 }
+// function node (1 args)
 template<class R, class A0>
 inline void wdmAddNode(const wdmString &path, R (*f)(A0))
 {
@@ -574,10 +506,115 @@ inline void wdmAddNode(const wdmString &path, R (C::*cmf)(A0) const, const C *_t
     _wdmGetRootNode()->addChild( path.c_str(), new wdmFunctionNode1<R,A0>(std::bind(cmf, _this, std::placeholders::_1)) );
 }
 
+
 inline void wdmEraseNode(const wdmString &path)
 {
     _wdmGetRootNode()->eraseChild(path.c_str());
 }
+
+
+
+
+// built-in types
+template<> inline const char* wdmTypename<int8_t >() { return "int8"; }
+template<> inline const char* wdmTypename<int16_t>() { return "int16"; }
+template<> inline const char* wdmTypename<int32_t>() { return "int32"; }
+template<> inline const char* wdmTypename<uint8_t >(){ return "uint8"; }
+template<> inline const char* wdmTypename<uint16_t>(){ return "uint16"; }
+template<> inline const char* wdmTypename<uint32_t>(){ return "uint32"; }
+template<> inline const char* wdmTypename<bool>()    { return "bool"; }
+template<> inline const char* wdmTypename<float>()   { return "float32"; }
+template<> inline const char* wdmTypename<double>()  { return "float64"; }
+
+template<> inline bool wdmParse(const char *text, int8_t  &v)  { int32_t t;  if(sscanf(text, "%i", &t)==1){ v=t; return true; } return false; }
+template<> inline bool wdmParse(const char *text, int16_t &v)  { int32_t t;  if(sscanf(text, "%i", &t)==1){ v=t; return true; } return false; }
+template<> inline bool wdmParse(const char *text, int32_t &v)  { int32_t t;  if(sscanf(text, "%i", &t)==1){ v=t; return true; } return false; }
+template<> inline bool wdmParse(const char *text, uint8_t  &v) { uint32_t t; if(sscanf(text, "%u", &t)==1){ v=t; return true; } return false; }
+template<> inline bool wdmParse(const char *text, uint16_t &v) { uint32_t t; if(sscanf(text, "%u", &t)==1){ v=t; return true; } return false; }
+template<> inline bool wdmParse(const char *text, uint32_t &v) { uint32_t t; if(sscanf(text, "%u", &t)==1){ v=t; return true; } return false; }
+template<> inline bool wdmParse(const char *text, bool &v)     { int32_t t;  if(sscanf(text, "%i", &t)==1){ v=t!=0; return true; } return false; }
+template<> inline bool wdmParse(const char *text, float &v)    { return sscanf(text, "%f", &v)==1; }
+template<> inline bool wdmParse(const char *text, double &v)   { return sscanf(text, "%lf", &v)==1; }
+
+template<> inline size_t wdmToS(char *text, size_t len, int8_t  v)  { return snprintf(text, len, "%i", (int32_t)v); }
+template<> inline size_t wdmToS(char *text, size_t len, int16_t v)  { return snprintf(text, len, "%i", (int32_t)v); }
+template<> inline size_t wdmToS(char *text, size_t len, int32_t v)  { return snprintf(text, len, "%i", v); }
+template<> inline size_t wdmToS(char *text, size_t len, uint8_t  v) { return snprintf(text, len, "%u", (uint32_t)v); }
+template<> inline size_t wdmToS(char *text, size_t len, uint16_t v) { return snprintf(text, len, "%u", (uint32_t)v); }
+template<> inline size_t wdmToS(char *text, size_t len, uint32_t v) { return snprintf(text, len, "%u", v); }
+template<> inline size_t wdmToS(char *text, size_t len, bool v)     { return snprintf(text, len, "%i", (int32_t)v); }
+template<> inline size_t wdmToS(char *text, size_t len, float v)    { return snprintf(text, len, "%f", v); }
+template<> inline size_t wdmToS(char *text, size_t len, double v)   { return snprintf(text, len, "%lf", v); }
+
+// vector types
+struct wdmInt32x2 { int v[2]; int& operator[](size_t i){return v[i];} };
+struct wdmInt32x3 { int v[3]; int& operator[](size_t i){return v[i];} };
+struct wdmInt32x4 { int v[4]; int& operator[](size_t i){return v[i];} };
+struct wdmFloat32x2 { float v[2]; float& operator[](size_t i){return v[i];} };
+struct wdmFloat32x3 { float v[3]; float& operator[](size_t i){return v[i];} };
+struct wdmFloat32x4 { float v[4]; float& operator[](size_t i){return v[i];} };
+
+template<> inline const char* wdmTypename<wdmInt32x2  >() { return "int32x2"; }
+template<> inline const char* wdmTypename<wdmInt32x3  >() { return "int32x3"; }
+template<> inline const char* wdmTypename<wdmInt32x4  >() { return "int32x4"; }
+template<> inline const char* wdmTypename<wdmFloat32x2>() { return "float32x2"; }
+template<> inline const char* wdmTypename<wdmFloat32x3>() { return "float32x3"; }
+template<> inline const char* wdmTypename<wdmFloat32x4>() { return "float32x4"; }
+
+template<> inline bool wdmParse(const char *text, wdmInt32x2   &v) { return sscanf(text, "[%d,%d]", &v[0],&v[1])==2; }
+template<> inline bool wdmParse(const char *text, wdmInt32x3   &v) { return sscanf(text, "[%d,%d,%d]", &v[0],&v[1],&v[2])==3; }
+template<> inline bool wdmParse(const char *text, wdmInt32x4   &v) { return sscanf(text, "[%d,%d,%d,%d]", &v[0],&v[1],&v[2],&v[3])==4; }
+template<> inline bool wdmParse(const char *text, wdmFloat32x2 &v) { return sscanf(text, "[%f,%f]", &v[0],&v[1])==2; }
+template<> inline bool wdmParse(const char *text, wdmFloat32x3 &v) { return sscanf(text, "[%f,%f,%f]", &v[0],&v[1],&v[2])==3; }
+template<> inline bool wdmParse(const char *text, wdmFloat32x4 &v) { return sscanf(text, "[%f,%f,%f,%f]", &v[0],&v[1],&v[2],&v[3])==4; }
+
+template<> inline size_t wdmToS(char *text, size_t len, wdmInt32x2   v) { return snprintf(text, len, "[%d,%d]", v[0],v[1]); }
+template<> inline size_t wdmToS(char *text, size_t len, wdmInt32x3   v) { return snprintf(text, len, "[%d,%d,%d]", v[0],v[1],v[2]); }
+template<> inline size_t wdmToS(char *text, size_t len, wdmInt32x4   v) { return snprintf(text, len, "[%d,%d,%d,%d]", v[0],v[1],v[2],v[3]); }
+template<> inline size_t wdmToS(char *text, size_t len, wdmFloat32x2 v) { return snprintf(text, len, "[%f,%f]", v[0],v[1]); }
+template<> inline size_t wdmToS(char *text, size_t len, wdmFloat32x3 v) { return snprintf(text, len, "[%f,%f,%f]", v[0],v[1],v[2]); }
+template<> inline size_t wdmToS(char *text, size_t len, wdmFloat32x4 v) { return snprintf(text, len, "[%f,%f,%f,%f]", v[0],v[1],v[2],v[3]); }
+
+// SSE
+#if defined(_INCLUDED_MM2) || defined(_XMMINTRIN_H_INCLUDED)
+template<> struct wdmCanBeRanged<__m128i>{ static const bool value=true; };
+template<> struct wdmCanBeRanged<__m128> { static const bool value=true; };
+template<> inline const char* wdmTypename<__m128i>() { return wdmTypename<wdmInt32x4  >(); }
+template<> inline const char* wdmTypename<__m128>()  { return wdmTypename<wdmFloat32x4>(); }
+template<> inline bool wdmParse(const char *text, __m128i &v) { return wdmParse<wdmInt32x4  >(text, (wdmInt32x4&)v); }
+template<> inline bool wdmParse(const char *text, __m128 &v)  { return wdmParse<wdmFloat32x4>(text, (wdmFloat32x4&)v); }
+template<> inline size_t wdmToS(char *text, size_t len, __m128i v) { return wdmToS<wdmInt32x4  >(text, len, (const wdmInt32x4&)v); }
+template<> inline size_t wdmToS(char *text, size_t len, __m128 v)  { return wdmToS<wdmFloat32x4>(text, len, (const wdmFloat32x4&)v); }
+#endif // defined(_INCLUDED_MM2) || defined(_XMMINTRIN_H_INCLUDED)
+
+// glm
+#ifdef glm_glm
+template<> struct wdmCanBeRanged<glm::ivec2> { static const bool value=true; };
+template<> struct wdmCanBeRanged<glm::ivec3> { static const bool value=true; };
+template<> struct wdmCanBeRanged<glm::ivec4> { static const bool value=true; };
+template<> struct wdmCanBeRanged<glm::vec2 > { static const bool value=true; };
+template<> struct wdmCanBeRanged<glm::vec3 > { static const bool value=true; };
+template<> struct wdmCanBeRanged<glm::vec4 > { static const bool value=true; };
+template<> inline const char* wdmTypename<glm::ivec2>() { return wdmTypename<wdmInt32x2>(); }
+template<> inline const char* wdmTypename<glm::ivec3>() { return wdmTypename<wdmInt32x3>(); }
+template<> inline const char* wdmTypename<glm::ivec4>() { return wdmTypename<wdmInt32x4>(); }
+template<> inline const char* wdmTypename<glm::vec2 >() { return wdmTypename<wdmFloat32x2>(); }
+template<> inline const char* wdmTypename<glm::vec3 >() { return wdmTypename<wdmFloat32x3>(); }
+template<> inline const char* wdmTypename<glm::vec4 >() { return wdmTypename<wdmFloat32x4>(); }
+template<> inline bool wdmParse(const char *text, glm::ivec2 &v) { return wdmParse<wdmInt32x2  >(text, (wdmInt32x2&)v); }
+template<> inline bool wdmParse(const char *text, glm::ivec3 &v) { return wdmParse<wdmInt32x3  >(text, (wdmInt32x3&)v); }
+template<> inline bool wdmParse(const char *text, glm::ivec4 &v) { return wdmParse<wdmInt32x4  >(text, (wdmInt32x4&)v); }
+template<> inline bool wdmParse(const char *text, glm::vec2  &v) { return wdmParse<wdmFloat32x2>(text, (wdmFloat32x2&)v); }
+template<> inline bool wdmParse(const char *text, glm::vec3  &v) { return wdmParse<wdmFloat32x3>(text, (wdmFloat32x3&)v); }
+template<> inline bool wdmParse(const char *text, glm::vec4  &v) { return wdmParse<wdmFloat32x4>(text, (wdmFloat32x4&)v); }
+template<> inline size_t wdmToS(char *text, size_t len, glm::ivec2 v) { return wdmToS<wdmInt32x2  >(text, len, (const wdmInt32x2&)v); }
+template<> inline size_t wdmToS(char *text, size_t len, glm::ivec3 v) { return wdmToS<wdmInt32x3  >(text, len, (const wdmInt32x3&)v); }
+template<> inline size_t wdmToS(char *text, size_t len, glm::ivec4 v) { return wdmToS<wdmInt32x4  >(text, len, (const wdmInt32x4&)v); }
+template<> inline size_t wdmToS(char *text, size_t len, glm::vec2  v) { return wdmToS<wdmFloat32x2>(text, len, (const wdmFloat32x2&)v); }
+template<> inline size_t wdmToS(char *text, size_t len, glm::vec3  v) { return wdmToS<wdmFloat32x3>(text, len, (const wdmFloat32x3&)v); }
+template<> inline size_t wdmToS(char *text, size_t len, glm::vec4  v) { return wdmToS<wdmFloat32x4>(text, len, (const wdmFloat32x4&)v); }
+#endif // glm_glm
+
 
 #else // wdmDisable
 

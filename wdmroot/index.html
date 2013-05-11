@@ -145,6 +145,41 @@ var create_float_control = function(type)
     return d;
 }
 
+var creater_vector_control = function(type, num_elements)
+{
+    var d = document.createElement("span");
+    d.numElements = num_elements;
+    d.setAttribute("class", type+"x"+num_elements);
+    for(var i=0; i<num_elements; ++i) {
+        d.appendChild(DataInputCreators[type]());
+    }
+    d.setValue = function(v) {
+        for(var i=0; i<this.numElements; ++i) {
+            this.children[i].setValue(v[i]);
+        }
+    }
+    d.getValue = function() {
+        var r = "[";
+        for(var i=0; i<this.numElements; ++i) {
+            r += this.children[i].getValue();
+            if(i+1!=this.numElements) { r+=","; }
+        }
+        r += "]";
+        return r;
+    }
+    d.setRange = function(r) {
+        for(var i=0; i<this.numElements; ++i) {
+            this.children[i].setRange([r[0][i], r[1][i]]);
+        }
+    }
+    d.makeReadOnly = function() {
+        for(var i=0; i<this.numElements; ++i) {
+            this.children[i].makeReadOnly();
+        }
+    }
+    return d;
+}
+
 var DataControlCreators = {
     "int8":  function() { return create_integer_control("int8"); },
     "int16": function() { return create_integer_control("int16"); },
@@ -156,128 +191,12 @@ var DataControlCreators = {
     "float32": function() { return create_float_control("float32"); },
     "float64": function() { return create_float_control("float32"); },
 
-    "int32x2": function() {
-        var d = document.createElement("span");
-        d.setAttribute("class", "int32x2");
-        d.appendChild(DataInputCreators.int32());
-        d.appendChild(DataInputCreators.int32());
-        d.setValue = function(v) {
-            this.children[0].setValue(v[0]);
-            this.children[1].setValue(v[1]);
-        }
-        d.getValue = function() {
-            return "["+
-            this.children[0].getValue()+","+
-            this.children[1].getValue()+
-            "]";
-        }
-        return d;
-    },
-    "int32x3": function() {
-        var d = document.createElement("span");
-        d.setAttribute("class", "int32x3");
-        d.appendChild(DataInputCreators.int32());
-        d.appendChild(DataInputCreators.int32());
-        d.appendChild(DataInputCreators.int32());
-        d.setValue = function(v) {
-            this.children[0].setValue(v[0]);
-            this.children[1].setValue(v[1]);
-            this.children[2].setValue(v[2]);
-        }
-        d.getValue = function() {
-            return "["+
-            this.children[0].getValue()+","+
-            this.children[1].getValue()+","+
-            this.children[2].getValue()+
-            "]";
-        }
-        return d;
-    },
-    "int32x4": function() {
-        var d = document.createElement("span");
-        d.setAttribute("class", "int32x4");
-        d.appendChild(DataInputCreators.int32());
-        d.appendChild(DataInputCreators.int32());
-        d.appendChild(DataInputCreators.int32());
-        d.appendChild(DataInputCreators.int32());
-        d.setValue = function(v) {
-            this.children[0].setValue(v[0]);
-            this.children[1].setValue(v[1]);
-            this.children[2].setValue(v[2]);
-            this.children[3].setValue(v[3]);
-        }
-        d.getValue = function() {
-            return "["+
-            this.children[0].getValue()+","+
-            this.children[1].getValue()+","+
-            this.children[2].getValue()+","+
-            this.children[3].getValue()+
-            "]";
-        }
-        return d;
-    },
-
-
-    "float32x2": function() {
-        var d = document.createElement("span");
-        d.setAttribute("class", "float32x2");
-        d.appendChild(DataInputCreators.float32());
-        d.appendChild(DataInputCreators.float32());
-        d.setValue = function(v) {
-            this.children[0].setValue(v[0]);
-            this.children[1].setValue(v[1]);
-        }
-        d.getValue = function() {
-            return "["+
-            this.children[0].getValue()+","+
-            this.children[1].getValue()+
-            "]";
-        }
-        return d;
-    },
-    "float32x3": function() {
-        var d = document.createElement("span");
-        d.setAttribute("class", "float32x3");
-        d.appendChild(DataInputCreators.float32());
-        d.appendChild(DataInputCreators.float32());
-        d.appendChild(DataInputCreators.float32());
-        d.setValue = function(v) {
-            this.children[0].setValue(v[0]);
-            this.children[1].setValue(v[1]);
-            this.children[2].setValue(v[2]);
-        }
-        d.getValue = function() {
-            return "["+
-            this.children[0].getValue()+","+
-            this.children[1].getValue()+","+
-            this.children[2].getValue()+
-            "]";
-        }
-        return d;
-    },
-    "float32x4": function() {
-        var d = document.createElement("span");
-        d.setAttribute("class", "float32x4");
-        d.appendChild(DataInputCreators.float32());
-        d.appendChild(DataInputCreators.float32());
-        d.appendChild(DataInputCreators.float32());
-        d.appendChild(DataInputCreators.float32());
-        d.setValue = function(v) {
-            this.children[0].setValue(v[0]);
-            this.children[1].setValue(v[1]);
-            this.children[2].setValue(v[2]);
-            this.children[3].setValue(v[3]);
-        }
-        d.getValue = function() {
-            return "["+
-            this.children[0].getValue()+","+
-            this.children[1].getValue()+","+
-            this.children[2].getValue()+","+
-            this.children[3].getValue()+
-            "]";
-        }
-        return d;
-    },
+    "int32x2": function() { return creater_vector_control("int32", 2); },
+    "int32x3": function() { return creater_vector_control("int32", 3); },
+    "int32x4": function() { return creater_vector_control("int32", 4); },
+    "float32x2": function() { return creater_vector_control("float32", 2); },
+    "float32x3": function() { return creater_vector_control("float32", 3); },
+    "float32x4": function() { return creater_vector_control("float32", 4); },
 
     //"float32x2x2":createFloatControl,
     //"float32x3x3":createFloatControl,

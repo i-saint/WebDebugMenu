@@ -19,7 +19,7 @@ public:
         wdmAddNode(p+"/m_ci32", &m_ci32);
         wdmAddNode(p+"/m_b", &m_b);
         wdmAddNode(p+"/m_f32", &m_f32, -1.0f, 1.0f);
-        wdmAddNode(p+"/m_m128", &m_m128);
+        wdmAddNode(p+"/m_m128", &m_m128, _mm_set_ps(0.0f,0.0f,0.0f,0.0f), _mm_set_ps(10.0f,10.0f,10.0f,10.0f));
         wdmAddNode(p+"/print()", &Test::print, this);
     }
 
