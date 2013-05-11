@@ -158,7 +158,6 @@ template<> inline size_t wdmToS(char *text, size_t len, glm::vec4  v) { return w
 #endif // glm_glm
 
 
-
 class wdmNodeBase : public wdmNode
 {
 protected:
@@ -293,14 +292,27 @@ private:
 
 
 template<class T>
+struct wdmRange
+{
+    typedef typename std::remove_const<typename std::remove_reference<T>::type>::type value_t;
+    bool enabled;
+    value_t min_value;
+    value_t max_value;
+
+    wdmRange() : enabled(false), min_value(), max_value() {}
+    wdmRange(T min_v, T max_v) : enabled(true), min_value(min_v), max_value(max_v) {}
+};
+
+template<class T>
 class wdmDataNode : public wdmNodeBase
 {
 typedef wdmNodeBase super;
 public:
     typedef T arg_t;
     typedef typename std::remove_const<T>::type value_t;
+    typedef wdmRange<T> range_t;
 
-    wdmDataNode(arg_t *value) : m_value(value) {}
+    wdmDataNode(arg_t *value, const range_t &range=range_t()) : m_value(value), m_range(range) {}
 
     virtual size_t jsonize(char *out, size_t len) const
     {
@@ -313,6 +325,13 @@ public:
             s += snprintf(out+s, len-s, "\"value\":");
             s += wdmToS(out+s, len-s, *m_value);
             s += snprintf(out+s, len-s, ", ");
+        }
+        if(m_range.enabled) {
+            s += snprintf(out+s, len-s, "\"range\":[");
+            s += wdmToS(out+s, len-s, m_range.min_value);
+            s += snprintf(out+s, len-s, ", ");
+            s += wdmToS(out+s, len-s, m_range.max_value);
+            s += snprintf(out+s, len-s, "], ");
         }
         s += jsonizeChildren(out+s, len-s);
         s += snprintf(out+s, len-s, "}");
@@ -345,6 +364,7 @@ public:
 
 private:
     arg_t *m_value;
+    range_t m_range;
 };
 
 
@@ -357,10 +377,12 @@ public:
     typedef typename std::remove_const<typename std::remove_reference<T>::type>::type value_t;
     typedef std::function<arg_t ()>     getter_t;
     typedef std::function<void (arg_t)> setter_t;
+    typedef wdmRange<T> range_t;
 
-    wdmPropertyNode(getter_t getter=getter_t(), setter_t setter=setter_t())
+    wdmPropertyNode(getter_t getter=getter_t(), setter_t setter=setter_t(), const range_t &range=range_t())
         : m_getter(getter)
         , m_setter(setter)
+        , m_range(range)
     {}
 
     virtual size_t jsonize(char *out, size_t len) const
@@ -374,6 +396,13 @@ public:
             s += snprintf(out+s, len-s, "\"value\":");
             s += wdmToS(out+s, len-s, m_getter());
             s += snprintf(out+s, len-s, ", ");
+        }
+        if(m_range.enabled) {
+            s += snprintf(out+s, len-s, "\"range\":[");
+            s += wdmToS(out+s, len-s, m_range.min_value);
+            s += snprintf(out+s, len-s, ", ");
+            s += wdmToS(out+s, len-s, m_range.max_value);
+            s += snprintf(out+s, len-s, "], ");
         }
         s += jsonizeChildren(out+s, len-s);
         s += snprintf(out+s, len-s, "}");
@@ -395,6 +424,7 @@ public:
 private:
     getter_t m_getter;
     setter_t m_setter;
+    range_t m_range;
 };
 
 template<class R>
@@ -488,11 +518,22 @@ inline void wdmAddNode(const wdmString &path, T *value)
 {
     _wdmGetRootNode()->addChild(path.c_str(), new wdmDataNode<T>(value));
 }
+template<class T>
+inline void wdmAddNode(const wdmString &path, T *value, T min_value, T max_value)
+{
+    _wdmGetRootNode()->addChild(path.c_str(), new wdmDataNode<T>(value, wdmRange<T>(min_value, max_value)));
+}
 
 template<class C, class T>
 inline void wdmAddNode(const wdmString &path, C *_this, T (C::*getter)() const, void (C::*setter)(T))
 {
     auto *n = new wdmPropertyNode<T>(std::bind(getter, _this), std::bind(setter, _this, std::placeholders::_1));
+    _wdmGetRootNode()->addChild(path.c_str(), n);
+}
+template<class C, class T, class T2>
+inline void wdmAddNode(const wdmString &path, C *_this, T (C::*getter)() const, void (C::*setter)(T), T2 min_value, T2 max_value)
+{
+    auto *n = new wdmPropertyNode<T>(std::bind(getter, _this), std::bind(setter, _this, std::placeholders::_1), wdmRange<T>(min_value, max_value));
     _wdmGetRootNode()->addChild(path.c_str(), n);
 }
 template<class C, class T>

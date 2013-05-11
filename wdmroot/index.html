@@ -14,195 +14,153 @@ var node_data = new Object();
 var node_loading = false;
 var node_timer;
 
-
-var createInputFuncs = {
-    "int8": function(){
-        var i = document.createElement("input");
-        i.setAttribute("class", "int8");
-        i.setAttribute("type", "text");
-        i.setAttribute("size", 4);
-        i.setAttribute("onfocus", "this.lockUpdate=true");
-        i.setAttribute("onblur", "this.lockUpdate=false");
-        i.setValue = function(v) { if(!this.lockUpdate) this.value=v.toString(); }
-        i.getValue = function() { return this.value; }
-        return i;
-    },
-    "int16": function(){
-        var i = document.createElement("input");
-        i.setAttribute("class", "int16");
-        i.setAttribute("type", "text");
-        i.setAttribute("size", 6);
-        i.setAttribute("onfocus", "this.lockUpdate=true");
-        i.setAttribute("onblur", "this.lockUpdate=false");
-        i.setValue = function(v) { if(!this.lockUpdate) this.value=v.toString(); }
-        i.getValue = function() { return this.value; }
-        return i;
-    },
-    "int32": function(){
-        var i = document.createElement("input");
-        i.setAttribute("class", "int32");
-        i.setAttribute("type", "text");
-        i.setAttribute("size", 10);
-        i.setAttribute("onfocus", "this.lockUpdate=true");
-        i.setAttribute("onblur", "this.lockUpdate=false");
-        i.setValue = function(v) { if(!this.lockUpdate) this.value=v.toString(); }
-        i.getValue = function() { return this.value; }
-        return i;
-    },
-
-    "uint8": function(){
-        var i = document.createElement("input");
-        i.setAttribute("class", "uint8");
-        i.setAttribute("type", "text");
-        i.setAttribute("size", 4);
-        i.setAttribute("onfocus", "this.lockUpdate=true");
-        i.setAttribute("onblur", "this.lockUpdate=false");
-        i.setValue = function(v) { if(!this.lockUpdate) this.value=v.toString(); }
-        i.getValue = function() { return this.value; }
-        return i;
-    },
-    "uint16": function(){
-        var i = document.createElement("input");
-        i.setAttribute("class", "uint16");
-        i.setAttribute("type", "text");
-        i.setAttribute("size", 6);
-        i.setAttribute("onfocus", "this.lockUpdate=true");
-        i.setAttribute("onblur", "this.lockUpdate=false");
-        i.setValue = function(v) { if(!this.lockUpdate) this.value=v.toString(); }
-        i.getValue = function() { return this.value; }
-        return i;
-    },
-    "uint32": function(){
-        var i = document.createElement("input");
-        i.setAttribute("class", "uint32");
-        i.setAttribute("type", "text");
-        i.setAttribute("size", 10);
-        i.setAttribute("onfocus", "this.lockUpdate=true");
-        i.setAttribute("onblur", "this.lockUpdate=false");
-        i.setValue = function(v) { if(!this.lockUpdate) this.value=v.toString(); }
-        i.getValue = function() { return this.value; }
-        return i;
-    },
-
-    "bool": function(){
-        var i = document.createElement("input");
-        i.setAttribute("class", "bool");
-        i.setAttribute("type", "checkbox");
-        i.setAttribute("onfocus", "this.lockUpdate=true");
-        i.setAttribute("onblur", "this.lockUpdate=false");
-        i.setValue = function(v) { if(!this.lockUpdate) this.checked=v!=0; }
-        i.getValue = function() { return this.checked ? 1 : 0; }
-        return i;
-    },
-
-    "float32": function(){
-        var i = document.createElement("input");
-        i.setAttribute("class", "float32");
-        i.setAttribute("type", "text");
-        i.setAttribute("size", 10);
-        i.setAttribute("onfocus", "this.lockUpdate=true");
-        i.setAttribute("onblur", "this.lockUpdate=false");
-        i.setValue = function(v) { if(!this.lockUpdate) this.value=v.toString(); }
-        i.getValue = function() { return this.value; }
-        return i;
-    },
-    "float64": function(){
-        var i = document.createElement("input");
-        i.setAttribute("class", "float64");
-        i.setAttribute("type", "text");
-        i.setAttribute("size", 10);
-        i.setAttribute("onfocus", "this.lockUpdate=true");
-        i.setAttribute("onblur", "this.lockUpdate=false");
-        i.setValue = function(v) { if(!this.lockUpdate) this.value=v.toString(); }
-        i.getValue = function() { return this.value; }
-        return i;
-    },
+var create_integer_input = function(type) {
+    var i = document.createElement("input");
+    i.setAttribute("class", type);
+    i.setAttribute("type", "text");
+    i.setAttribute("size", 8);
+    i.setAttribute("onfocus", "this.lockUpdate=true");
+    i.setAttribute("onblur", "this.lockUpdate=false");
+    i.setAttribute("onchange", "this.parentNode.notifyChange()");
+    var s = document.createElement("span");
+    s.appendChild(i);
+    s.inputNode = i;
+    s.makeReadOnly = function() { this.inputNode.disabled=true; }
+    s.notifyChange = function() { this.parentNode.parentNode.notifyChange(); }
+    s.setValue = function(v) { if(!this.inputNode.lockUpdate) this.inputNode.value=v.toString(); }
+    s.getValue = function() { return parseInt(this.inputNode.value); }
+    s.onSlider = function() {
+        var p = parseInt(this.slider.value)*0.01;
+        var r = this.dataRange;
+        var v = Math.floor(r[0]+(r[1]-r[0])*p);
+        this.inputNode.value = v.toString();
+    }
+    s.setRange = function(r) {
+        var ri = document.createElement("input");
+        ri.setAttribute("type", "range");
+        ri.setAttribute("onchange", "this.parentNode.onSlider()");
+        ri.setAttribute("onmousedown", "this.parentNode.inputNode.lockUpdate=true");
+        ri.setAttribute("onmouseup", "this.parentNode.inputNode.lockUpdate=false;this.parentNode.notifyChange()");
+        this.appendChild(ri);
+        this.dataRange = r;
+        this.slider = ri;
+    }
+    return s;
 }
 
-var createControlFuncs = {
-    "int8": function() {
-        var d = document.createElement("span");
-        d.setAttribute("class", "int8");
-        d.appendChild(createInputFuncs.int8());
-        d.setValue = function(v) { this.children[0].setValue(v); }
-        d.getValue = function() { return this.children[0].getValue(); }
-        return d;
-    },
-    "int16": function() {
-        var d = document.createElement("span");
-        d.setAttribute("class", "int16");
-        d.appendChild(createInputFuncs.int16());
-        d.setValue = function(v) { this.children[0].setValue(v); }
-        d.getValue = function() { return this.children[0].getValue(); }
-        return d;
-    },
-    "int32": function() {
-        var d = document.createElement("span");
-        d.setAttribute("class", "int32");
-        d.appendChild(createInputFuncs.int32());
-        d.setValue = function(v) { this.children[0].setValue(v); }
-        d.getValue = function() { return this.children[0].getValue(); }
-        return d;
-    },
+var create_bool_input = function() {
+    var i = document.createElement("input");
+    i.setAttribute("class", "bool");
+    i.setAttribute("type", "checkbox");
+    i.setAttribute("onchange", "this.parentNode.notifyChange()");
+    var s = document.createElement("span");
+    s.appendChild(i);
+    s.inputNode = i;
+    s.makeReadOnly = function() { this.inputNode.disabled=true; }
+    s.notifyChange = function() { this.parentNode.parentNode.notifyChange(); }
+    s.setValue = function(v) { if(!this.inputNode.lockUpdate) this.inputNode.checked=v!=0; }
+    s.getValue = function() { return this.inputNode.checked ? 1 : 0; }
+    return s;
+}
+
+var create_float_input = function(type) {
+    var i = document.createElement("input");
+    i.setAttribute("class", type);
+    i.setAttribute("type", "text");
+    i.setAttribute("size", 8);
+    i.setAttribute("onfocus", "this.lockUpdate=true");
+    i.setAttribute("onblur", "this.lockUpdate=false");
+    i.setAttribute("onchange", "this.parentNode.notifyChange()");
+    var s = document.createElement("span");
+    s.appendChild(i);
+    s.inputNode = i;
+    s.makeReadOnly = function() { this.inputNode.disabled=true; }
+    s.notifyChange = function() { this.parentNode.parentNode.notifyChange(); }
+    s.setValue = function(v) { if(!this.inputNode.lockUpdate) this.inputNode.value=v.toString(); }
+    s.getValue = function() { return parseFloat(this.inputNode.value); }
+    s.onSlider = function() {
+        var p = parseInt(this.slider.value)*0.01;
+        var r = this.dataRange;
+        var v = r[0]+(r[1]-r[0])*p;
+        this.inputNode.value = v.toString();
+    }
+    s.setRange = function(r) {
+        var ri = document.createElement("input");
+        ri.setAttribute("type", "range");
+        ri.setAttribute("onchange", "this.parentNode.onSlider()");
+        ri.setAttribute("onmousedown", "this.parentNode.inputNode.lockUpdate=true");
+        ri.setAttribute("onmouseup", "this.parentNode.inputNode.lockUpdate=false;this.parentNode.notifyChange()");
+        this.appendChild(ri);
+        this.dataRange = r;
+        this.slider = ri;
+    }
+    return s;
+}
+
+var DataInputCreators = {
+    "int8":  function() { return create_integer_input("int8") },
+    "int16": function() { return create_integer_input("int16") },
+    "int32": function() { return create_integer_input("int32") },
+    "uint8": function() { return create_integer_input("uint8") },
+    "uint16":function() { return create_integer_input("uint16") },
+    "uint32":function() { return create_integer_input("uint32") },
+    "bool": create_bool_input,
+    "float32": function() { return create_float_input("float32") },
+    "float64": function() { return create_float_input("float64") },
+}
 
 
-    "uint8": function() {
-        var d = document.createElement("span");
-        d.setAttribute("class", "uint8");
-        d.appendChild(createInputFuncs.uint8());
-        d.setValue = function(v) { this.children[0].setValue(v); }
-        d.getValue = function() { return this.children[0].getValue(); }
-        return d;
-    },
-    "uint16": function() {
-        var d = document.createElement("span");
-        d.setAttribute("class", "uint16");
-        d.appendChild(createInputFuncs.uint16());
-        d.setValue = function(v) { this.children[0].setValue(v); }
-        d.getValue = function() { return this.children[0].getValue(); }
-        return d;
-    },
-    "uint32": function() {
-        var d = document.createElement("span");
-        d.setAttribute("class", "uint32");
-        d.appendChild(createInputFuncs.uint32());
-        d.setValue = function(v) { this.children[0].setValue(v); }
-        d.getValue = function() { return this.children[0].getValue(); }
-        return d;
-    },
+var create_integer_control = function(type)
+{
+    var d = document.createElement("span");
+    d.setAttribute("class", type);
+    d.appendChild(DataInputCreators[type]());
+    d.setValue = function(v) { this.children[0].setValue(v); }
+    d.getValue = function() { return this.children[0].getValue(); }
+    d.setRange = function(r) { this.children[0].setRange(r); };
+    d.makeReadOnly = function() { this.children[0].makeReadOnly(); }
+    return d;
+}
 
-    "bool": function() {
-        var d = document.createElement("span");
-        d.setAttribute("class", "bool");
-        d.appendChild(createInputFuncs.bool());
-        d.setValue = function(v) { this.children[0].setValue(v); }
-        d.getValue = function() { return this.children[0].getValue(); }
-        return d;
-    },
+var create_bool_control = function()
+{
+    var d = document.createElement("span");
+    d.setAttribute("class", "bool");
+    d.appendChild(DataInputCreators.bool());
+    d.setValue = function(v) { this.children[0].setValue(v); }
+    d.getValue = function() { return this.children[0].getValue(); }
+    d.makeReadOnly = function() { this.children[0].makeReadOnly(); }
+    return d;
+}
 
-    "float32": function() {
-        var d = document.createElement("span");
-        d.setAttribute("class", "float32");
-        d.appendChild(createInputFuncs.float32());
-        d.setValue = function(v) { this.children[0].setValue(v); }
-        d.getValue = function() { return this.children[0].getValue(); }
-        return d;
-    },
-    "float64": function() {
-        var d = document.createElement("span");
-        d.setAttribute("class", "float64");
-        d.appendChild(createInputFuncs.float64());
-        d.setValue = function(v) { this.children[0].setValue(v); }
-        d.getValue = function() { return this.children[0].getValue(); }
-        return d;
-    },
+var create_float_control = function(type)
+{
+    var d = document.createElement("span");
+    d.setAttribute("class", "float32");
+    d.appendChild(DataInputCreators.float32());
+    d.setValue = function(v) { this.children[0].setValue(v); }
+    d.getValue = function() { return this.children[0].getValue(); }
+    d.setRange = function(r) { this.children[0].setRange(r); };
+    d.makeReadOnly = function() { this.children[0].makeReadOnly(); }
+    return d;
+}
 
+var DataControlCreators = {
+    "int8":  function() { return create_integer_control("int8"); },
+    "int16": function() { return create_integer_control("int16"); },
+    "int32": function() { return create_integer_control("int32"); },
+    "uint8": function() { return create_integer_control("uint8"); },
+    "uint16":function() { return create_integer_control("uint16"); },
+    "uint32":function() { return create_integer_control("uint32"); },
+    "bool": create_bool_control,
+    "float32": function() { return create_float_control("float32"); },
+    "float64": function() { return create_float_control("float32"); },
 
     "int32x2": function() {
         var d = document.createElement("span");
         d.setAttribute("class", "int32x2");
-        d.appendChild(createInputFuncs.int32());
-        d.appendChild(createInputFuncs.int32());
+        d.appendChild(DataInputCreators.int32());
+        d.appendChild(DataInputCreators.int32());
         d.setValue = function(v) {
             this.children[0].setValue(v[0]);
             this.children[1].setValue(v[1]);
@@ -218,9 +176,9 @@ var createControlFuncs = {
     "int32x3": function() {
         var d = document.createElement("span");
         d.setAttribute("class", "int32x3");
-        d.appendChild(createInputFuncs.int32());
-        d.appendChild(createInputFuncs.int32());
-        d.appendChild(createInputFuncs.int32());
+        d.appendChild(DataInputCreators.int32());
+        d.appendChild(DataInputCreators.int32());
+        d.appendChild(DataInputCreators.int32());
         d.setValue = function(v) {
             this.children[0].setValue(v[0]);
             this.children[1].setValue(v[1]);
@@ -238,10 +196,10 @@ var createControlFuncs = {
     "int32x4": function() {
         var d = document.createElement("span");
         d.setAttribute("class", "int32x4");
-        d.appendChild(createInputFuncs.int32());
-        d.appendChild(createInputFuncs.int32());
-        d.appendChild(createInputFuncs.int32());
-        d.appendChild(createInputFuncs.int32());
+        d.appendChild(DataInputCreators.int32());
+        d.appendChild(DataInputCreators.int32());
+        d.appendChild(DataInputCreators.int32());
+        d.appendChild(DataInputCreators.int32());
         d.setValue = function(v) {
             this.children[0].setValue(v[0]);
             this.children[1].setValue(v[1]);
@@ -263,8 +221,8 @@ var createControlFuncs = {
     "float32x2": function() {
         var d = document.createElement("span");
         d.setAttribute("class", "float32x2");
-        d.appendChild(createInputFuncs.float32());
-        d.appendChild(createInputFuncs.float32());
+        d.appendChild(DataInputCreators.float32());
+        d.appendChild(DataInputCreators.float32());
         d.setValue = function(v) {
             this.children[0].setValue(v[0]);
             this.children[1].setValue(v[1]);
@@ -280,9 +238,9 @@ var createControlFuncs = {
     "float32x3": function() {
         var d = document.createElement("span");
         d.setAttribute("class", "float32x3");
-        d.appendChild(createInputFuncs.float32());
-        d.appendChild(createInputFuncs.float32());
-        d.appendChild(createInputFuncs.float32());
+        d.appendChild(DataInputCreators.float32());
+        d.appendChild(DataInputCreators.float32());
+        d.appendChild(DataInputCreators.float32());
         d.setValue = function(v) {
             this.children[0].setValue(v[0]);
             this.children[1].setValue(v[1]);
@@ -300,10 +258,10 @@ var createControlFuncs = {
     "float32x4": function() {
         var d = document.createElement("span");
         d.setAttribute("class", "float32x4");
-        d.appendChild(createInputFuncs.float32());
-        d.appendChild(createInputFuncs.float32());
-        d.appendChild(createInputFuncs.float32());
-        d.appendChild(createInputFuncs.float32());
+        d.appendChild(DataInputCreators.float32());
+        d.appendChild(DataInputCreators.float32());
+        d.appendChild(DataInputCreators.float32());
+        d.appendChild(DataInputCreators.float32());
         d.setValue = function(v) {
             this.children[0].setValue(v[0]);
             this.children[1].setValue(v[1]);
@@ -330,8 +288,15 @@ var createControlFuncs = {
 function getOrCreateNode(parent, data)
 {
     var node = $("node"+data.id);
+    if(node!=null && node.nodeID!=data.id) {
+        node.parentNode.removeChild(node);
+        node = null;
+    }
+
     if(node==null) {
         node = document.createElement("div");
+        node.nodeID = data.id;
+        node.notifyChange = function() { handleChange(this.nodeID); }
         node.setAttribute("class", "data_cell");
         node.setAttribute("id", "node"+data.id);
 
@@ -351,20 +316,13 @@ function getOrCreateNode(parent, data)
 
         if(data.type!=null) {
             var dataType = document.createElement("span");
-            dataType.setAttribute("id", "dataType"+data.id);
             dataType.appendChild(document.createTextNode("("+data.type+")"));
             node.appendChild(dataType);
 
-            var inp = createControlFuncs[data.type]();
+            var inp = DataControlCreators[data.type]();
             inp.setAttribute("id", "data"+data.id);
-            for(var i=0; i<inp.children.length; ++i) {
-                if(data.readonly) {
-                    inp.children[i].setAttribute("disabled", true);
-                }
-                else {
-                    inp.children[i].setAttribute("onchange", "handleChange("+data.id+")");
-                }
-            }
+            if(data.range) { inp.setRange(data.range); }
+            if(data.readonly) { inp.makeReadOnly(); }
             node.appendChild(inp);
             node.dataNode = inp;
         }

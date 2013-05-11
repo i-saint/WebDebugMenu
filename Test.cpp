@@ -13,12 +13,12 @@ public:
     {
         m_m128 = _mm_set_ps(0.0f, 1.0f, 2.0f, 3.0f);
         wdmScope( wdmString p = wdmFormat("Test0x%p", this); );
-        wdmAddNode(p+"/m_i32", &m_i32);
-        wdmAddNode(p+"/property_i32", this, &Test::getI32, &Test::setI32);
+        wdmAddNode(p+"/m_i32", &m_i32, 100, 500);
+        wdmAddNode(p+"/property_i32", this, &Test::getI32, &Test::setI32, 0, 500);
         wdmAddNode(p+"/property_ro_i32", this, &Test::getI32);
         wdmAddNode(p+"/m_ci32", &m_ci32);
         wdmAddNode(p+"/m_b", &m_b);
-        wdmAddNode(p+"/m_f32", &m_f32);
+        wdmAddNode(p+"/m_f32", &m_f32, -1.0f, 1.0f);
         wdmAddNode(p+"/m_m128", &m_m128);
         wdmAddNode(p+"/print()", &Test::print, this);
     }
