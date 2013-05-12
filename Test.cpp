@@ -11,6 +11,8 @@ public:
         , m_b(true)
         , m_f32(10.0f)
     {
+        snprintf(m_charstr, _countof(m_charstr), "test charstr");
+        snwprintf(m_wcharstr, _countof(m_wcharstr), L"test wcharstr");
         m_m128 = _mm_set_ps(0.0f, 1.0f, 2.0f, 3.0f);
         wdmScope( wdmString p = wdmFormat("Test0x%p", this); );
         wdmAddNode(p+"/m_i32", &m_i32, 100, 500);
@@ -20,6 +22,9 @@ public:
         wdmAddNode(p+"/m_b", &m_b);
         wdmAddNode(p+"/m_f32", &m_f32, -1.0f, 1.0f);
         wdmAddNode(p+"/m_m128", &m_m128, _mm_set_ps(0.0f,0.0f,0.0f,0.0f), _mm_set_ps(10.0f,10.0f,10.0f,10.0f));
+        wdmAddNode(p+"/m_charstr", &m_charstr);
+        wdmAddNode(p+"/m_wcharstr", &m_wcharstr);
+        wdmAddNode(p+"/property_charstr", this, &Test::getCharStr);
         wdmAddNode(p+"/print()", &Test::print, this);
     }
 
@@ -30,6 +35,7 @@ public:
 
     void setI32(const int &v) { m_i32=v; }
     const int& getI32() const { return m_i32; }
+    const char* getCharStr() const { return m_charstr; }
 
     void print() const
     {
@@ -49,6 +55,8 @@ private:
     bool m_b;
     float m_f32;
     __m128 m_m128;
+    char m_charstr[128];
+    wchar_t m_wcharstr[128];
 };
 
 int main(int argc, char *argv[])
