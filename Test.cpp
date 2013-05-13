@@ -30,7 +30,7 @@ public:
 
     ~Test()
     {
-        wdmEraseNode(wdmFormat("Test0x%p", this));
+        wdmEraseNode( wdmFormat("Test0x%p", this) );
     }
 
     void setI32(const int &v) { m_i32=v; }
@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
     Test test;
     for(;;) {
         wdmFlush();
-        ::Sleep(1000);
+        ::Sleep(100);
     }
 
     wdmFinalize();

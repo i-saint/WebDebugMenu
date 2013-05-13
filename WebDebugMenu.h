@@ -69,7 +69,7 @@ extern "C" {
 #define vsnwprintf  _vsnwprintf
 #endif // defined(_WIN32) && !defined(snprintf)
 
-// std::remove_const は参照やポインタの const は外さないようなので…
+// std::remove_const はポインタの const は外さないので、外すものを用意
 template<class T> struct wdmRemoveConst { typedef T type; };
 template<class T> struct wdmRemoveConst<const T> { typedef T type; };
 template<class T> struct wdmRemoveConst<const T*> { typedef T* type; };
@@ -84,11 +84,40 @@ template<class T, size_t N> struct wdmRemoveConstReference<const T[N]> { typedef
 
 typedef std::string wdmString;
 template<class T> inline const char* wdmTypename();
-template<class T> inline bool wdmParse(const char *out, T &value);
+template<class T> inline bool wdmParse(const char *text, T &value);
 template<class T> inline size_t wdmToS(char *out, size_t len, T value);
 
 template<class T, size_t N>
-struct wdmToSImpl
+struct wdmArrayParseImpl
+{
+    static inline bool nextSeparator(const char *s, size_t &pos)
+    {
+        for(;; ++pos) {
+            if     (s[pos]==',') { return true; }
+            else if(s[pos]=='\0') { return false; }
+        }
+        return false;
+    }
+    size_t operator()(char *text, T (&value)[N])
+    {
+        size_t num_parsed = 0;
+        size_t pos = 0;
+        T tmp;
+        if(text[pos++]!='[') { return 0; }
+        for(;;) {
+            if(wdmParse(text+pos, tmp)) {
+                value[num_parsed++] = tmp;
+                if(!nextSeparator(text, pos)) { break; }
+                ++pos;
+            }
+        }
+        return num_parsed;
+    }
+};
+template<class T, size_t N> inline size_t wdmParse(char *text, T (&value)[N]) { return wdmArrayParseImpl<T, N>()(text, value); }
+
+template<class T, size_t N>
+struct wdmArrayToSImpl
 {
     size_t operator()(char *out, size_t len, T (&value)[N])
     {
@@ -102,7 +131,7 @@ struct wdmToSImpl
         return s;
     }
 };
-template<class T, size_t N> inline size_t wdmToS(char *out, size_t len, T (&value)[N]) { return wdmToSImpl<T, N>()(out, len, value); }
+template<class T, size_t N> inline size_t wdmToS(char *out, size_t len, T (&value)[N]) { return wdmArrayToSImpl<T, N>()(out, len, value); }
 
 class wdmNodeBase : public wdmNode
 {
@@ -644,8 +673,8 @@ template<> inline size_t wdmToS(char *out, size_t len, const wchar_t * v) {
 template<> inline size_t wdmToS(char *out, size_t len, char *v)    { return wdmToS<const char*>(out, len, v); }
 template<> inline size_t wdmToS(char *out, size_t len, wchar_t *v) { return wdmToS<const wchar_t*>(out, len, v); }
 
-template<size_t N> struct wdmToSImpl<char,    N> { size_t operator()(char *out, size_t len, char    (&value)[N]) { return wdmToS(out, len, (char*)value);    } };
-template<size_t N> struct wdmToSImpl<wchar_t, N> { size_t operator()(char *out, size_t len, wchar_t (&value)[N]) { return wdmToS(out, len, (wchar_t*)value); } };
+template<size_t N> struct wdmArrayToSImpl<char,    N> { size_t operator()(char *out, size_t len, char    (&value)[N]) { return wdmToS(out, len, (char*)value);    } };
+template<size_t N> struct wdmArrayToSImpl<wchar_t, N> { size_t operator()(char *out, size_t len, wchar_t (&value)[N]) { return wdmToS(out, len, (wchar_t*)value); } };
 
 // vector types
 struct wdmInt32x2 { int v[2]; int& operator[](size_t i){return v[i];} };
