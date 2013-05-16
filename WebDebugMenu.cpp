@@ -348,7 +348,7 @@ wdmString& wdmSystem::createJSONData()
     m_json.resize(m_json.capacity());
     size_t ret = 0;
     for(;;) {
-        ret = m_root->jsonize(&m_json[0], m_json.size());
+        ret = m_root->jsonize(&m_json[0], m_json.size(), true);
         if(ret==m_json.size()) {
             m_json.resize(m_json.size()*2);
         }

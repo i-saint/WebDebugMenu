@@ -42,7 +42,7 @@ public:
     virtual void        addChild(const char *path, wdmNode *child)=0;
     virtual void        eraseChild(const char *path)=0;
     virtual void        setName(const char *name, size_t len=0)=0;
-    virtual size_t      jsonize(char *out, size_t len) const=0;
+    virtual size_t      jsonize(char *out, size_t len, bool recursive) const=0;
     virtual bool        handleEvent(const wdmEvent &evt)=0;
 };
 
@@ -98,7 +98,7 @@ struct wdmArrayParseImpl
         }
         return false;
     }
-    size_t operator()(char *text, T (&value)[N])
+    size_t operator()(const char *text, T (&value)[N])
     {
         size_t num_parsed = 0;
         size_t pos = 0;
@@ -114,7 +114,7 @@ struct wdmArrayParseImpl
         return num_parsed;
     }
 };
-template<class T, size_t N> inline size_t wdmParse(char *text, T (&value)[N]) { return wdmArrayParseImpl<T, N>()(text, value); }
+template<class T, size_t N> inline size_t wdmParse(const char *text, T (&value)[N]) { return wdmArrayParseImpl<T, N>()(text, value); }
 
 template<class T, size_t N>
 struct wdmArrayToSImpl
@@ -233,23 +233,26 @@ public:
         m_name = len!=0 ? wdmString(name, len) : name;
     }
 
-    size_t jsonizeChildren(char *out, size_t len) const
+    size_t jsonizeChildren(char *out, size_t len, bool recursive) const
     {
         size_t s = 0;
-        s += snprintf(out+s, len-s, "\"children\": [");
-        for(size_t i=0; i<getNumChildren(); ++i) {
-            s += getChild(i)->jsonize(out+s, len-s);
-            if(i+1!=getNumChildren()) { s += snprintf(out+s, len-s, ", "); }
+        s += snprintf(out+s, len-s, "\"hasChildren\": %d", getNumChildren()!=0);
+        if(recursive && getNumChildren()!=0) {
+            s += snprintf(out+s, len-s, ", \"children\": [");
+            for(size_t i=0; i<getNumChildren(); ++i) {
+                s += getChild(i)->jsonize(out+s, len-s, recursive);
+                if(i+1!=getNumChildren()) { s += snprintf(out+s, len-s, ", "); }
+            }
+            s += snprintf(out+s, len-s, "]");
         }
-        s += snprintf(out+s, len-s, "]");
         return s;
     }
 
-    virtual size_t jsonize(char *out, size_t len) const
+    virtual size_t jsonize(char *out, size_t len, bool recursive) const
     {
         size_t s = 0;
         s += snprintf(out+s, len-s, "{\"id\":%d, \"name\":\"%s\", ", getID(), getName());
-        s += jsonizeChildren(out+s, len-s);
+        s += jsonizeChildren(out+s, len-s, recursive);
         s += snprintf(out+s, len-s, "}");
         return s;
     }
@@ -316,7 +319,7 @@ public:
 
     wdmDataNode(arg_t *value, const range_t &range=range_t()) : m_value(value), m_range(range) {}
 
-    virtual size_t jsonize(char *out, size_t len) const
+    virtual size_t jsonize(char *out, size_t len, bool recursive) const
     {
         size_t s = 0;
         s += snprintf(out+s, len-s, "{\"id\":%d, \"name\":\"%s\", \"type\":\"%s\",", getID(), getName(), wdmTypename<value_t>());
@@ -329,7 +332,7 @@ public:
             s += snprintf(out+s, len-s, ", ");
         }
         s += m_range.jsonize(out+s, len-s);
-        s += jsonizeChildren(out+s, len-s);
+        s += jsonizeChildren(out+s, len-s, recursive);
         s += snprintf(out+s, len-s, "}");
         return s;
     }
@@ -374,7 +377,7 @@ public:
 
     wdmArrayNode(array_t *value) : m_value(value) {}
 
-    virtual size_t jsonize(char *out, size_t len) const
+    virtual size_t jsonize(char *out, size_t len, bool recursive) const
     {
         size_t s = 0;
         s += snprintf(out+s, len-s, "{\"id\":%d, \"name\":\"%s\", \"type\":\"%s\", \"length\":%d, ", getID(), getName(), wdmTypename<value_t>(), (int)N);
@@ -386,15 +389,40 @@ public:
             s += wdmToS(out+s, len-s, *m_value);
             s += snprintf(out+s, len-s, ", ");
         }
-        s += jsonizeChildren(out+s, len-s);
+        s += jsonizeChildren(out+s, len-s, recursive);
         s += snprintf(out+s, len-s, "}");
         return s;
     }
 
+    template<class T, bool readonly=wdmIsReadOnly<T>::value>
+    struct handleSet {
+        bool operator()(const wdmEvent &evt, array_t *value)
+        {
+            if(strncmp(evt.command, "set(", 4)==0) {
+                if(wdmParse(evt.command+4, *value)) {
+                    return true;
+                }
+            }
+            else if(strncmp(evt.command, "at(", 3)==0) {
+                int i = atoi(evt.command+3);
+                value_t tmp;
+                int pos=3;
+                for(;;++pos) { if(evt.command[pos]==',') { ++pos; break;} }
+                if(wdmParse(evt.command+pos, tmp)) {
+                    (*value)[i] = tmp;
+                    return true;
+                }
+            }
+            return false;
+        }
+    };
+    template<class T>
+    struct handleSet<T, true> {
+        bool operator()(const wdmEvent &evt, const array_t *value) { return false; }
+    };
     virtual bool handleEvent(const wdmEvent &evt)
     {
-        // todo
-        return super::handleEvent(evt);
+        return handleSet<elem_t>()(evt, m_value) || super::handleEvent(evt);
     }
 
 private:
@@ -418,7 +446,7 @@ public:
         , m_range(range)
     {}
 
-    virtual size_t jsonize(char *out, size_t len) const
+    virtual size_t jsonize(char *out, size_t len, bool recursive) const
     {
         size_t s = 0;
         s += snprintf(out+s, len-s, "{\"id\":%d, \"name\":\"%s\", \"type\":\"%s\",", getID(), getName(), wdmTypename<value_t>());
@@ -431,7 +459,7 @@ public:
             s += snprintf(out+s, len-s, ", ");
         }
         s += m_range.jsonize(out+s, len-s);
-        s += jsonizeChildren(out+s, len-s);
+        s += jsonizeChildren(out+s, len-s, recursive);
         s += snprintf(out+s, len-s, "}");
         return s;
     }
@@ -465,11 +493,11 @@ public:
         : m_func(func)
     {}
 
-    virtual size_t jsonize(char *out, size_t len) const
+    virtual size_t jsonize(char *out, size_t len, bool recursive) const
     {
         size_t s = 0;
         s += snprintf(out+s, len-s, "{\"id\":%d, \"name\":\"%s\", \"callable\":true, \"arg_types\":[],", getID(), getName() );
-        s += jsonizeChildren(out+s, len-s);
+        s += jsonizeChildren(out+s, len-s, recursive);
         s += snprintf(out+s, len-s, "}");
         return s;
     }
@@ -501,11 +529,11 @@ public:
         : m_func(func)
     {}
 
-    virtual size_t jsonize(char *out, size_t len) const
+    virtual size_t jsonize(char *out, size_t len, bool recursive) const
     {
         size_t s = 0;
         s += snprintf(out+s, len-s, "{\"id\":%d, \"name\":\"%s\", \"callable\":true, \"arg_types\":[\"%s\"],", getID(), getName(), wdmTypename<a0_t>() );
-        s += jsonizeChildren(out+s, len-s);
+        s += jsonizeChildren(out+s, len-s, recursive);
         s += snprintf(out+s, len-s, "}");
         return s;
     }
@@ -632,20 +660,22 @@ template<> inline const char* wdmTypename<bool>()    { return "bool"; }
 template<> inline const char* wdmTypename<float>()   { return "float32"; }
 template<> inline const char* wdmTypename<double>()  { return "float64"; }
 template<> inline const char* wdmTypename<char>()    { return "char"; }
-template<> inline const char* wdmTypename<char*>()   { return "char"; }
+template<> inline const char* wdmTypename<char*>()   { return "char*"; }
 template<> inline const char* wdmTypename<wchar_t>() { return "wchar"; }
-template<> inline const char* wdmTypename<wchar_t*>(){ return "wchar"; }
+template<> inline const char* wdmTypename<wchar_t*>(){ return "wchar*"; }
 
-template<> inline bool wdmParse(const char *out, int8_t  &v)  { int32_t t;  if(sscanf(out, "%i", &t)==1){ v=t; return true; } return false; }
-template<> inline bool wdmParse(const char *out, int16_t &v)  { int32_t t;  if(sscanf(out, "%i", &t)==1){ v=t; return true; } return false; }
-template<> inline bool wdmParse(const char *out, int32_t &v)  { int32_t t;  if(sscanf(out, "%i", &t)==1){ v=t; return true; } return false; }
-template<> inline bool wdmParse(const char *out, uint8_t  &v) { uint32_t t; if(sscanf(out, "%u", &t)==1){ v=t; return true; } return false; }
-template<> inline bool wdmParse(const char *out, uint16_t &v) { uint32_t t; if(sscanf(out, "%u", &t)==1){ v=t; return true; } return false; }
-template<> inline bool wdmParse(const char *out, uint32_t &v) { uint32_t t; if(sscanf(out, "%u", &t)==1){ v=t; return true; } return false; }
-template<> inline bool wdmParse(const char *out, bool &v)     { int32_t t;  if(sscanf(out, "%i", &t)==1){ v=t!=0; return true; } return false; }
-template<> inline bool wdmParse(const char *out, float &v)    { return sscanf(out, "%f", &v)==1; }
-template<> inline bool wdmParse(const char *out, char *&v)    { return false; }
-template<> inline bool wdmParse(const char *out, wchar_t *&v) { return false; }
+template<> inline bool wdmParse(const char *text, int8_t  &v)  { int32_t t;  if(sscanf(text, "%i", &t)==1){ v=t; return true; } return false; }
+template<> inline bool wdmParse(const char *text, int16_t &v)  { int32_t t;  if(sscanf(text, "%i", &t)==1){ v=t; return true; } return false; }
+template<> inline bool wdmParse(const char *text, int32_t &v)  { int32_t t;  if(sscanf(text, "%i", &t)==1){ v=t; return true; } return false; }
+template<> inline bool wdmParse(const char *text, uint8_t  &v) { uint32_t t; if(sscanf(text, "%u", &t)==1){ v=t; return true; } return false; }
+template<> inline bool wdmParse(const char *text, uint16_t &v) { uint32_t t; if(sscanf(text, "%u", &t)==1){ v=t; return true; } return false; }
+template<> inline bool wdmParse(const char *text, uint32_t &v) { uint32_t t; if(sscanf(text, "%u", &t)==1){ v=t; return true; } return false; }
+template<> inline bool wdmParse(const char *text, bool &v)     { int32_t t;  if(sscanf(text, "%i", &t)==1){ v=t!=0; return true; } return false; }
+template<> inline bool wdmParse(const char *text, float &v)    { return sscanf(text, "%f", &v)==1; }
+template<> inline bool wdmParse(const char *text, char &v)     { return false; }
+template<> inline bool wdmParse(const char *text, wchar_t &v)  { return false; }
+template<> inline bool wdmParse(const char *text, char *&v)    { return false; }
+template<> inline bool wdmParse(const char *text, wchar_t *&v) { return false; }
 
 template<> inline size_t wdmToS(char *out, size_t len, int8_t  v)  { return snprintf(out, len, "%i", (int32_t)v); }
 template<> inline size_t wdmToS(char *out, size_t len, int16_t v)  { return snprintf(out, len, "%i", (int32_t)v); }
@@ -675,6 +705,31 @@ template<> inline size_t wdmToS(char *out, size_t len, wchar_t *v) { return wdmT
 
 template<size_t N> struct wdmArrayToSImpl<char,    N> { size_t operator()(char *out, size_t len, char    (&value)[N]) { return wdmToS(out, len, (char*)value);    } };
 template<size_t N> struct wdmArrayToSImpl<wchar_t, N> { size_t operator()(char *out, size_t len, wchar_t (&value)[N]) { return wdmToS(out, len, (wchar_t*)value); } };
+
+template<size_t N> struct wdmArrayParseImpl<char, N> {
+    size_t operator()(const char *text, char (&value)[N]) {
+        if(text[0]!='"') { return 0; }
+        const char *beg = text+1;
+        int l = 0;
+        for(; beg[l]!='\0' && !(beg[l]=='"' && beg[l-1]!='\\'); ++l) {}
+        size_t n = std::min<size_t>(l, N-1);
+        strncpy(value, beg, n);
+        value[n] = '\0';
+        return 1;
+    }
+};
+template<size_t N> struct wdmArrayParseImpl<wchar_t, N> {
+    size_t operator()(const char *text, wchar_t (&value)[N]) {
+        if(text[0]!='"') { return 0; }
+        const char *beg = text+1;
+        int l = 0;
+        for(; beg[l]!='\0' && !(beg[l]=='"' && beg[l-1]!='\\'); ++l) {}
+        size_t n = std::min<size_t>(l, N-1);
+        mbstowcs(value, beg, n);
+        value[n] = L'\0';
+        return 1;
+    }
+};
 
 // vector types
 struct wdmInt32x2 { int v[2]; int& operator[](size_t i){return v[i];} };

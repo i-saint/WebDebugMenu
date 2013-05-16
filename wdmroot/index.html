@@ -5,6 +5,7 @@
 
  <style type="text/css">
  .data_children {margin:2px 2px 2px 10px;}
+ .data_type {margin:0px 5px 0px 5px;}
  </style>
 
 <script type="text/javascript" src="prototype.js"></script>
@@ -26,7 +27,7 @@ var create_integer_input = function(type) {
     s.appendChild(i);
     s.inputNode = i;
     s.makeReadOnly = function() { this.inputNode.disabled=true; }
-    s.notifyChange = function() { this.parentNode.parentNode.notifyChange(); }
+    s.notifyChange = function() { this.parentNode.parentNode.notifyChange(this); }
     s.setValue = function(v) { if(!this.inputNode.lockUpdate) this.inputNode.value=v.toString(); }
     s.getValue = function() { return parseInt(this.inputNode.value); }
     s.onSlider = function() {
@@ -57,7 +58,7 @@ var create_bool_input = function() {
     s.appendChild(i);
     s.inputNode = i;
     s.makeReadOnly = function() { this.inputNode.disabled=true; }
-    s.notifyChange = function() { this.parentNode.parentNode.notifyChange(); }
+    s.notifyChange = function() { this.parentNode.parentNode.notifyChange(this); }
     s.setValue = function(v) { if(!this.inputNode.lockUpdate) this.inputNode.checked=v!=0; }
     s.getValue = function() { return this.inputNode.checked ? 1 : 0; }
     return s;
@@ -75,7 +76,7 @@ var create_float_input = function(type) {
     s.appendChild(i);
     s.inputNode = i;
     s.makeReadOnly = function() { this.inputNode.disabled=true; }
-    s.notifyChange = function() { this.parentNode.parentNode.notifyChange(); }
+    s.notifyChange = function() { this.parentNode.parentNode.notifyChange(this); }
     s.setValue = function(v) { if(!this.inputNode.lockUpdate) this.inputNode.value=v.toString(); }
     s.getValue = function() { return parseFloat(this.inputNode.value); }
     s.onSlider = function() {
@@ -101,7 +102,7 @@ var create_string_input = function(type) {
     var i = document.createElement("input");
     i.setAttribute("class", type);
     i.setAttribute("type", "text");
-    i.setAttribute("size", 8);
+    i.setAttribute("size", 16);
     i.setAttribute("onfocus", "this.lockUpdate=true");
     i.setAttribute("onblur", "this.lockUpdate=false");
     i.setAttribute("onchange", "this.parentNode.notifyChange()");
@@ -121,67 +122,72 @@ var DataInputCreators = {
     "int8":  function() { return create_integer_input("int8") },
     "int16": function() { return create_integer_input("int16") },
     "int32": function() { return create_integer_input("int32") },
+    "int64": function() { return create_integer_input("int64") },
     "uint8": function() { return create_integer_input("uint8") },
     "uint16":function() { return create_integer_input("uint16") },
     "uint32":function() { return create_integer_input("uint32") },
+    "uint64":function() { return create_integer_input("uint64") },
     "bool": create_bool_input,
     "float32": function() { return create_float_input("float32") },
     "float64": function() { return create_float_input("float64") },
-    "char":  function() { return create_string_input("char") },
-    "wchar": function() { return create_string_input("wchar") },
+    "char":   function() { return create_string_input("char") },
+    "char*":  function() { return create_string_input("char*") },
+    "wchar":  function() { return create_string_input("wchar") },
+    "wchar*": function() { return create_string_input("wchar*") },
     "string": function() { return create_string_input("string") },
     "wstring":function() { return create_string_input("wstring") },
 }
 
+var create_control_common = function(node)
+{
+    if(node.dataChildren.length) {
+        node.setValue = function(v) { var d=this.dataChildren; for(var i=0; i<d.length; ++i){d[i].setValue(v[i]);} }
+        node.getValue = function() { var t=[]; this.dataChildren.each(function(c){t.push(c.getValue(v));}); return t; }
+        node.setRange = function(r) { this.dataChildren.each(function(c){c.setRange(r);}); };
+        node.makeReadOnly = function() { this.dataChildren.each(function(c){c.makeReadOnly();}) }
+    }
+    else {
+        node.setValue = function(v) { this.dataChildren.setValue(v); }
+        node.getValue = function() { return this.dataChildren.getValue(); }
+        node.setRange = function(r) { this.dataChildren.setRange(r); };
+        node.makeReadOnly = function() { this.dataChildren.makeReadOnly(); }
+    }
+}
 
-var create_integer_control = function(type)
+var create_scalar_control = function(type, len)
 {
     var d = document.createElement("span");
     d.setAttribute("class", type);
-    d.appendChild(DataInputCreators[type]());
-    d.setValue = function(v) { this.children[0].setValue(v); }
-    d.getValue = function() { return this.children[0].getValue(); }
-    d.setRange = function(r) { this.children[0].setRange(r); };
-    d.makeReadOnly = function() { this.children[0].makeReadOnly(); }
+    if(len) {
+        d.dataChildren = [];
+        for(var i=0; i<len; ++i) {
+            var t = DataInputCreators[type]();
+            t.arrayIndex = i;
+            d.appendChild(t);
+            d.dataChildren.push(t);
+        }
+    }
+    else {
+        var t = DataInputCreators[type]();
+        d.appendChild(t);
+        d.dataChildren = t;
+    }
+    create_control_common(d);
     return d;
 }
 
-var create_bool_control = function()
-{
-    var d = document.createElement("span");
-    d.setAttribute("class", "bool");
-    d.appendChild(DataInputCreators.bool());
-    d.setValue = function(v) { this.children[0].setValue(v); }
-    d.getValue = function() { return this.children[0].getValue(); }
-    d.makeReadOnly = function() { this.children[0].makeReadOnly(); }
-    return d;
-}
-
-var create_float_control = function(type)
-{
-    var d = document.createElement("span");
-    d.setAttribute("class", type);
-    d.appendChild(DataInputCreators[type]());
-    d.setValue = function(v) { this.children[0].setValue(v); }
-    d.getValue = function() { return this.children[0].getValue(); }
-    d.setRange = function(r) { this.children[0].setRange(r); };
-    d.makeReadOnly = function() { this.children[0].makeReadOnly(); }
-    return d;
-}
-
-var create_string_control = function(type)
+var create_string_control = function(type, len)
 {
     var d = document.createElement("span");
     d.setAttribute("class", type);
-    d.appendChild(DataInputCreators[type]());
-    d.setValue = function(v) { this.children[0].setValue(v); }
-    d.getValue = function() { return this.children[0].getValue(); }
-    d.setRange = function(r) { this.children[0].setRange(r); };
-    d.makeReadOnly = function() { this.children[0].makeReadOnly(); }
+    var t = DataInputCreators[type]();
+    d.appendChild(t);
+    d.dataChildren = t;
+    create_control_common(d);
     return d;
 }
 
-var creater_vector_control = function(type, num_elements)
+var creater_vector_control = function(type, num_elements, len)
 {
     var d = document.createElement("span");
     d.numElements = num_elements;
@@ -217,27 +223,29 @@ var creater_vector_control = function(type, num_elements)
 }
 
 var DataControlCreators = {
-    "int8":  function() { return create_integer_control("int8"); },
-    "int16": function() { return create_integer_control("int16"); },
-    "int32": function() { return create_integer_control("int32"); },
-    "uint8": function() { return create_integer_control("uint8"); },
-    "uint16":function() { return create_integer_control("uint16"); },
-    "uint32":function() { return create_integer_control("uint32"); },
-    "bool": create_bool_control,
-    "float32": function() { return create_float_control("float32"); },
-    "float64": function() { return create_float_control("float32"); },
+    "int8":     function(l) { return create_scalar_control("int8", l); },
+    "int16":    function(l) { return create_scalar_control("int16", l); },
+    "int32":    function(l) { return create_scalar_control("int32", l); },
+    "uint8":    function(l) { return create_scalar_control("uint8", l); },
+    "uint16":   function(l) { return create_scalar_control("uint16", l); },
+    "uint32":   function(l) { return create_scalar_control("uint32", l); },
+    "bool":     function(l) { return create_scalar_control("bool", l); },
+    "float32":  function(l) { return create_scalar_control("float32", l); },
+    "float64":  function(l) { return create_scalar_control("float32", l); },
 
-    "char" : function()  { return create_string_control("char"); },
-    "wchar" : function() { return create_string_control("wchar"); },
-    "string" : function() { return create_string_control("string"); },
-    "wstring" : function(){ return create_string_control("wstring"); },
+    "char" :    function(l) { return create_string_control("char", l); },
+    "char*" :   function(l) { return create_string_control("char*", l); },
+    "wchar" :   function(l) { return create_string_control("wchar", l); },
+    "wchar*" :  function(l) { return create_string_control("wchar*", l); },
+    "string" :  function(l) { return create_string_control("string", l); },
+    "wstring" : function(l) { return create_string_control("wstring", l); },
 
-    "int32x2": function() { return creater_vector_control("int32", 2); },
-    "int32x3": function() { return creater_vector_control("int32", 3); },
-    "int32x4": function() { return creater_vector_control("int32", 4); },
-    "float32x2": function() { return creater_vector_control("float32", 2); },
-    "float32x3": function() { return creater_vector_control("float32", 3); },
-    "float32x4": function() { return creater_vector_control("float32", 4); },
+    "int32x2":  function(l) { return creater_vector_control("int32", 2, l); },
+    "int32x3":  function(l) { return creater_vector_control("int32", 3, l); },
+    "int32x4":  function(l) { return creater_vector_control("int32", 4, l); },
+    "float32x2":function(l) { return creater_vector_control("float32", 2, l); },
+    "float32x3":function(l) { return creater_vector_control("float32", 3, l); },
+    "float32x4":function(l) { return creater_vector_control("float32", 4, l); },
 
     //"float32x2x2":createFloatControl,
     //"float32x3x3":createFloatControl,
@@ -248,10 +256,6 @@ var DataControlCreators = {
 function getOrCreateNode(parent, data)
 {
     var node = $("node"+data.id);
-    if(node!=null && node.nodeID!=data.id) {
-        node.parentNode.removeChild(node);
-        node = null;
-    }
 
     if(node==null) {
         node = document.createElement("div");
@@ -260,10 +264,9 @@ function getOrCreateNode(parent, data)
         node.setAttribute("class", "data_cell");
         node.setAttribute("id", "node"+data.id);
 
-        if(data.name!="" && data.children.length>0) {
+        if(data.name!="" && data.hasChildren) {
             var cross = document.createElement("span");
-            cross.setAttribute("id", "cross"+data.id);
-            cross.setAttribute("cross", "cross");
+            cross.setAttribute("class", "cross");
             cross.setAttribute("onclick", "toggleVisibility("+data.id+")");
             cross.appendChild(document.createTextNode("-"));
             node.appendChild(cross);
@@ -271,16 +274,19 @@ function getOrCreateNode(parent, data)
         }
 
         var name = document.createElement("span");
+        name.setAttribute("class", "data_name");
         name.appendChild(document.createTextNode(data.name));
         node.appendChild(name);
 
         if(data.type!=null) {
             var dataType = document.createElement("span");
-            dataType.appendChild(document.createTextNode("("+data.type+")"));
+            dataType.setAttribute("class", "data_type");
+            var typename = data.type;
+            if(data.length!=null) { typename+="["+data.length+"]"; }
+            dataType.appendChild(document.createTextNode("("+typename+")"));
             node.appendChild(dataType);
 
-            var inp = DataControlCreators[data.type]();
-            inp.setAttribute("id", "data"+data.id);
+            var inp = DataControlCreators[data.type](data.length);
             if(data.range) { inp.setRange(data.range); }
             if(data.readonly) { inp.makeReadOnly(); }
             node.appendChild(inp);
@@ -292,6 +298,7 @@ function getOrCreateNode(parent, data)
             button.setAttribute("onclick", "handleCall("+data.id+")");
             button.setAttribute("value", "call");
             node.appendChild(button);
+            node.callButton = button;
         }
 
         children = document.createElement("div");
@@ -311,8 +318,10 @@ function updateDataGrid(div, data, depth)
 {
     var node = getOrCreateNode(div, data);
     node.updated = true;
-    for(var i=0; i<data.children.length; ++i) {
-        updateDataGrid(node.dataChildren, data.children[i], depth+1);
+    if(data.hasChildren) {
+        for(var i=0; i<data.children.length; ++i) {
+            updateDataGrid(node.dataChildren, data.children[i], depth+1);
+        }
     }
 }
 
@@ -364,8 +373,9 @@ function updateNodeData()
 
 function toggleVisibility(id)
 {
-    var children = $("node"+id).lastChild;
-    var cross = $("cross"+id);
+    var node = $("node"+id);
+    var children = node.lastChild;
+    var cross = node.toggleNode;
     if(children.style.display=="") {
         children.style.display = "none";
         cross.innerText = "+";
@@ -378,7 +388,7 @@ function toggleVisibility(id)
 
 function handleChange(id)
 {
-    postCommand(id.toString()+"->set(" + $("data"+id).getValue() + ")");
+    postCommand(id.toString()+"->set(" + $("node"+id).dataNode.getValue() + ")");
 }
 
 function handleCall(id)
