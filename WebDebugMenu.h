@@ -279,12 +279,12 @@ template<class T> struct wdmCanBeRanged
 };
 
 template<class T, bool valid=wdmCanBeRanged<T>::value>
-struct wdmRange
+struct __declspec(align(16)) wdmRange
 {
     typedef typename wdmRemoveConstReference<T>::type value_t;
-    bool enabled;
     value_t min_value;
     value_t max_value;
+    bool enabled;
 
     wdmRange() : enabled(false), min_value(), max_value() {}
     wdmRange(T min_v, T max_v) : enabled(true), min_value(min_v), max_value(max_v) {}
@@ -317,7 +317,7 @@ public:
     typedef typename wdmRemoveConst<T>::type value_t;
     typedef wdmRange<T> range_t;
 
-    wdmDataNode(arg_t *value, const range_t &range=range_t()) : m_value(value), m_range(range) {}
+    wdmDataNode(arg_t *value, const range_t &range=range_t()) : m_range(range), m_value(value) {}
 
     virtual size_t jsonize(char *out, size_t len, bool recursive) const
     {
@@ -361,8 +361,8 @@ public:
     }
 
 private:
-    arg_t *m_value;
     range_t m_range;
+    arg_t *m_value;
 };
 
 
@@ -374,8 +374,9 @@ public:
     typedef T (array_t)[N];
     typedef T elem_t;
     typedef typename wdmRemoveConst<T>::type value_t;
+    typedef wdmRange<T> range_t;
 
-    wdmArrayNode(array_t *value) : m_value(value) {}
+    wdmArrayNode(array_t *value, const range_t &range=range_t()) : m_range(range), m_value(value) {}
 
     virtual size_t jsonize(char *out, size_t len, bool recursive) const
     {
@@ -389,6 +390,7 @@ public:
             s += wdmToS(out+s, len-s, *m_value);
             s += snprintf(out+s, len-s, ", ");
         }
+        s += m_range.jsonize(out+s, len-s);
         s += jsonizeChildren(out+s, len-s, recursive);
         s += snprintf(out+s, len-s, "}");
         return s;
@@ -426,6 +428,7 @@ public:
     }
 
 private:
+    range_t m_range;
     array_t *m_value;
 };
 
@@ -585,6 +588,11 @@ template<class T, size_t N>
 inline void wdmAddNode(const wdmString &path, T (*value)[N])
 {
     _wdmGetRootNode()->addChild(path.c_str(), new wdmArrayNode<T, N>(value));
+}
+template<class T, size_t N>
+inline void wdmAddNode(const wdmString &path, T (*value)[N], T min_value, T max_value)
+{
+    _wdmGetRootNode()->addChild(path.c_str(), new wdmArrayNode<T, N>(value, wdmRange<T>(min_value, max_value)));
 }
 
 // property node
@@ -759,6 +767,9 @@ template<> inline size_t wdmToS(char *text, size_t len, wdmInt32x4   v) { return
 template<> inline size_t wdmToS(char *text, size_t len, wdmFloat32x2 v) { return snprintf(text, len, "[%f,%f]", v[0],v[1]); }
 template<> inline size_t wdmToS(char *text, size_t len, wdmFloat32x3 v) { return snprintf(text, len, "[%f,%f,%f]", v[0],v[1],v[2]); }
 template<> inline size_t wdmToS(char *text, size_t len, wdmFloat32x4 v) { return snprintf(text, len, "[%f,%f,%f,%f]", v[0],v[1],v[2],v[3]); }
+
+template<> struct wdmCanBeRanged<char>   { static const bool value=false; };
+template<> struct wdmCanBeRanged<wchar_t>{ static const bool value=false; };
 
 
 // SSE
