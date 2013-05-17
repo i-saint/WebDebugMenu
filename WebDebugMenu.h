@@ -119,7 +119,7 @@ template<class T, size_t N> inline size_t wdmParse(const char *text, T (&value)[
 template<class T, size_t N>
 struct wdmArrayToSImpl
 {
-    size_t operator()(char *out, size_t len, T (&value)[N])
+    size_t operator()(char *out, size_t len, const T (&value)[N])
     {
         size_t s = 0;
         s += snprintf(out+s, len-s, "[");
@@ -131,7 +131,7 @@ struct wdmArrayToSImpl
         return s;
     }
 };
-template<class T, size_t N> inline size_t wdmToS(char *out, size_t len, T (&value)[N]) { return wdmArrayToSImpl<T, N>()(out, len, value); }
+template<class T, size_t N> inline size_t wdmToS(char *out, size_t len, const T (&value)[N]) { return wdmArrayToSImpl<T, N>()(out, len, value); }
 
 class wdmNodeBase : public wdmNode
 {
@@ -279,7 +279,7 @@ template<class T> struct wdmCanBeRanged
 };
 
 template<class T, bool valid=wdmCanBeRanged<T>::value>
-struct __declspec(align(16)) wdmRange
+struct wdmRange
 {
     typedef typename wdmRemoveConstReference<T>::type value_t;
     value_t min_value;
@@ -308,14 +308,53 @@ struct wdmRange<T, false>
     size_t jsonize(char *out, size_t len) const { return 0; }
 };
 
+template<class T, bool available=!wdmIsReadOnly<T>::value>
+struct wdmHandleSet
+{
+    bool operator()(const wdmEvent &evt, T *value)
+    {
+        if(strncmp(evt.command, "set(", 4)==0) {
+            if(wdmParse(evt.command+4, *value)) {
+                return true;
+            }
+        }
+        return false;
+    }
+};
 template<class T>
+struct wdmHandleSet<T, false> {
+    bool operator()(const wdmEvent &evt, const T *value) { return false; }
+};
+
+template<class T, bool available=!wdmIsReadOnly<T>::value && std::is_array<T>::value>
+struct wdmHandleAt
+{
+    bool operator()(const wdmEvent &evt, T *value)
+    {
+        if(strncmp(evt.command, "at(", 3)==0) {
+            int i = atoi(evt.command+3);
+            int pos=3;
+            for(;;++pos) { if(evt.command[pos]==',') { ++pos; break;} }
+            if(wdmParse(evt.command+pos, (*value)[i])) {
+                return true;
+            }
+        }
+        return false;
+    }
+};
+template<class T>
+struct wdmHandleAt<T, false> {
+    bool operator()(const wdmEvent &evt, const T *value) { return false; }
+};
+
+template<class T, class T2=T>
 class wdmDataNode : public wdmNodeBase
 {
 typedef wdmNodeBase super;
 public:
     typedef T arg_t;
-    typedef typename wdmRemoveConst<T>::type value_t;
-    typedef wdmRange<T> range_t;
+    typedef typename wdmRemoveConstReference<T>::type value_t;
+    typedef wdmRange<T2> range_t;
 
     wdmDataNode(arg_t *value, const range_t &range=range_t()) : m_range(range), m_value(value) {}
 
@@ -323,6 +362,46 @@ public:
     {
         size_t s = 0;
         s += snprintf(out+s, len-s, "{\"id\":%d, \"name\":\"%s\", \"type\":\"%s\",", getID(), getName(), wdmTypename<value_t>());
+        if(wdmIsReadOnly<arg_t>::value) {
+            s += snprintf(out+s, len-s, "\"readonly\":true, ");
+        }
+        {
+            s += snprintf(out+s, len-s, "\"value\":");
+            s += wdmToS(out+s, len-s, (const value_t&)*m_value);
+            s += snprintf(out+s, len-s, ", ");
+        }
+        s += m_range.jsonize(out+s, len-s);
+        s += jsonizeChildren(out+s, len-s, recursive);
+        s += snprintf(out+s, len-s, "}");
+        return s;
+    }
+
+    virtual bool handleEvent(const wdmEvent &evt)
+    {
+        return wdmHandleSet<arg_t>()(evt, m_value) || wdmHandleAt<arg_t>()(evt, m_value) || super::handleEvent(evt);
+    }
+
+private:
+    range_t m_range;
+    arg_t *m_value;
+};
+
+
+template<class T, size_t N, class T2=T>
+class wdmArrayNode : public wdmNodeBase
+{
+typedef wdmNodeBase super;
+public:
+    typedef T (arg_t)[N];
+    typedef typename wdmRemoveConstReference<T>::type value_t;
+    typedef wdmRange<T2> range_t;
+
+    wdmArrayNode(arg_t *value, const range_t &range=range_t()) : m_range(range), m_value(value) {}
+
+    virtual size_t jsonize(char *out, size_t len, bool recursive) const
+    {
+        size_t s = 0;
+        s += snprintf(out+s, len-s, "{\"id\":%d, \"name\":\"%s\", \"type\":\"%s\", \"length\":%d, ", getID(), getName(), wdmTypename<value_t>(), (int)N);
         if(wdmIsReadOnly<arg_t>::value) {
             s += snprintf(out+s, len-s, "\"readonly\":true, ");
         }
@@ -337,27 +416,9 @@ public:
         return s;
     }
 
-    template<class T, bool readonly=wdmIsReadOnly<T>::value>
-    struct handleSet {
-        bool operator()(const wdmEvent &evt, T *value)
-        {
-            if(strncmp(evt.command, "set(", 4)==0) {
-                value_t tmp;
-                if(wdmParse(evt.command+4, tmp)) {
-                    *value = tmp;
-                    return true;
-                }
-            }
-            return false;
-        }
-    };
-    template<class T>
-    struct handleSet<T, true> {
-        bool operator()(const wdmEvent &evt, const T *value) { return false; }
-    };
     virtual bool handleEvent(const wdmEvent &evt)
     {
-        return handleSet<arg_t>()(evt, m_value) || super::handleEvent(evt);
+        return wdmHandleSet<arg_t>()(evt, m_value) || wdmHandleAt<arg_t>()(evt, m_value) || super::handleEvent(evt);
     }
 
 private:
@@ -365,74 +426,7 @@ private:
     arg_t *m_value;
 };
 
-
-template<class T, size_t N>
-class wdmArrayNode : public wdmNodeBase
-{
-typedef wdmNodeBase super;
-public:
-    typedef T (array_t)[N];
-    typedef T elem_t;
-    typedef typename wdmRemoveConst<T>::type value_t;
-    typedef wdmRange<T> range_t;
-
-    wdmArrayNode(array_t *value, const range_t &range=range_t()) : m_range(range), m_value(value) {}
-
-    virtual size_t jsonize(char *out, size_t len, bool recursive) const
-    {
-        size_t s = 0;
-        s += snprintf(out+s, len-s, "{\"id\":%d, \"name\":\"%s\", \"type\":\"%s\", \"length\":%d, ", getID(), getName(), wdmTypename<value_t>(), (int)N);
-        if(wdmIsReadOnly<array_t>::value) {
-            s += snprintf(out+s, len-s, "\"readonly\":true, ");
-        }
-        {
-            s += snprintf(out+s, len-s, "\"value\":");
-            s += wdmToS(out+s, len-s, *m_value);
-            s += snprintf(out+s, len-s, ", ");
-        }
-        s += m_range.jsonize(out+s, len-s);
-        s += jsonizeChildren(out+s, len-s, recursive);
-        s += snprintf(out+s, len-s, "}");
-        return s;
-    }
-
-    template<class T, bool readonly=wdmIsReadOnly<T>::value>
-    struct handleSet {
-        bool operator()(const wdmEvent &evt, array_t *value)
-        {
-            if(strncmp(evt.command, "set(", 4)==0) {
-                if(wdmParse(evt.command+4, *value)) {
-                    return true;
-                }
-            }
-            else if(strncmp(evt.command, "at(", 3)==0) {
-                int i = atoi(evt.command+3);
-                value_t tmp;
-                int pos=3;
-                for(;;++pos) { if(evt.command[pos]==',') { ++pos; break;} }
-                if(wdmParse(evt.command+pos, tmp)) {
-                    (*value)[i] = tmp;
-                    return true;
-                }
-            }
-            return false;
-        }
-    };
-    template<class T>
-    struct handleSet<T, true> {
-        bool operator()(const wdmEvent &evt, const array_t *value) { return false; }
-    };
-    virtual bool handleEvent(const wdmEvent &evt)
-    {
-        return handleSet<elem_t>()(evt, m_value) || super::handleEvent(evt);
-    }
-
-private:
-    range_t m_range;
-    array_t *m_value;
-};
-
-template<class T>
+template<class T, class T2=T>
 class wdmPropertyNode : public wdmNodeBase
 {
 typedef wdmNodeBase super;
@@ -441,7 +435,7 @@ public:
     typedef typename wdmRemoveConstReference<T>::type value_t;
     typedef std::function<arg_t ()>     getter_t;
     typedef std::function<void (arg_t)> setter_t;
-    typedef wdmRange<arg_t> range_t;
+    typedef wdmRange<T2> range_t;
 
     wdmPropertyNode(getter_t getter=getter_t(), setter_t setter=setter_t(), const range_t &range=range_t())
         : m_getter(getter)
@@ -458,7 +452,8 @@ public:
         }
         if(m_getter) {
             s += snprintf(out+s, len-s, "\"value\":");
-            s += wdmToS(out+s, len-s, m_getter());
+            arg_t t = m_getter();
+            s += wdmToS(out+s, len-s, (const value_t&)t);
             s += snprintf(out+s, len-s, ", ");
         }
         s += m_range.jsonize(out+s, len-s);
@@ -469,11 +464,13 @@ public:
 
     virtual bool handleEvent(const wdmEvent &evt)
     {
-        if(m_setter && strncmp(evt.command, "set(", 4)==0) {
-            value_t tmp;
-            if(wdmParse(evt.command+4, tmp)) {
-                m_setter(tmp);
-                return true;
+        if(m_setter) {
+            if(strncmp(evt.command, "set(", 4)==0) {
+                value_t tmp;
+                if(wdmParse(evt.command+4, tmp)) {
+                    m_setter(tmp);
+                    return true;
+                }
             }
         }
         return super::handleEvent(evt);
@@ -577,10 +574,10 @@ inline void wdmAddNode(const wdmString &path, T *value)
 {
     _wdmGetRootNode()->addChild(path.c_str(), new wdmDataNode<T>(value));
 }
-template<class T>
-inline void wdmAddNode(const wdmString &path, T *value, T min_value, T max_value)
+template<class T, class T2>
+inline void wdmAddNode(const wdmString &path, T *value, T2 min_value, T2 max_value)
 {
-    _wdmGetRootNode()->addChild(path.c_str(), new wdmDataNode<T>(value, wdmRange<T>(min_value, max_value)));
+    _wdmGetRootNode()->addChild(path.c_str(), new wdmDataNode<T, T2>(value, wdmRange<T>(min_value, max_value)));
 }
 
 // array node
@@ -589,10 +586,10 @@ inline void wdmAddNode(const wdmString &path, T (*value)[N])
 {
     _wdmGetRootNode()->addChild(path.c_str(), new wdmArrayNode<T, N>(value));
 }
-template<class T, size_t N>
-inline void wdmAddNode(const wdmString &path, T (*value)[N], T min_value, T max_value)
+template<class T, size_t N, class T2>
+inline void wdmAddNode(const wdmString &path, T (*value)[N], T2 min_value, T2 max_value)
 {
-    _wdmGetRootNode()->addChild(path.c_str(), new wdmArrayNode<T, N>(value, wdmRange<T>(min_value, max_value)));
+    _wdmGetRootNode()->addChild(path.c_str(), new wdmArrayNode<T, N, T2>(value, wdmRange<T2>(min_value, max_value)));
 }
 
 // property node
@@ -711,8 +708,8 @@ template<> inline size_t wdmToS(char *out, size_t len, const wchar_t * v) {
 template<> inline size_t wdmToS(char *out, size_t len, char *v)    { return wdmToS<const char*>(out, len, v); }
 template<> inline size_t wdmToS(char *out, size_t len, wchar_t *v) { return wdmToS<const wchar_t*>(out, len, v); }
 
-template<size_t N> struct wdmArrayToSImpl<char,    N> { size_t operator()(char *out, size_t len, char    (&value)[N]) { return wdmToS(out, len, (char*)value);    } };
-template<size_t N> struct wdmArrayToSImpl<wchar_t, N> { size_t operator()(char *out, size_t len, wchar_t (&value)[N]) { return wdmToS(out, len, (wchar_t*)value); } };
+template<size_t N> struct wdmArrayToSImpl<char,    N> { size_t operator()(char *out, size_t len, const char    (&value)[N]) { return wdmToS(out, len, (char*)value);    } };
+template<size_t N> struct wdmArrayToSImpl<wchar_t, N> { size_t operator()(char *out, size_t len, const wchar_t (&value)[N]) { return wdmToS(out, len, (wchar_t*)value); } };
 
 template<size_t N> struct wdmArrayParseImpl<char, N> {
     size_t operator()(const char *text, char (&value)[N]) {
@@ -774,8 +771,6 @@ template<> struct wdmCanBeRanged<wchar_t>{ static const bool value=false; };
 
 // SSE
 #if defined(_INCLUDED_MM2) || defined(_XMMINTRIN_H_INCLUDED)
-template<> struct wdmCanBeRanged<__m128i>{ static const bool value=true; };
-template<> struct wdmCanBeRanged<__m128> { static const bool value=true; };
 template<> inline const char* wdmTypename<__m128i>() { return wdmTypename<wdmInt32x4  >(); }
 template<> inline const char* wdmTypename<__m128>()  { return wdmTypename<wdmFloat32x4>(); }
 template<> inline bool wdmParse(const char *text, __m128i &v) { return wdmParse<wdmInt32x4  >(text, (wdmInt32x4&)v); }
@@ -786,12 +781,6 @@ template<> inline size_t wdmToS(char *text, size_t len, __m128 v)  { return wdmT
 
 // glm
 #ifdef glm_glm
-template<> struct wdmCanBeRanged<glm::ivec2> { static const bool value=true; };
-template<> struct wdmCanBeRanged<glm::ivec3> { static const bool value=true; };
-template<> struct wdmCanBeRanged<glm::ivec4> { static const bool value=true; };
-template<> struct wdmCanBeRanged<glm::vec2 > { static const bool value=true; };
-template<> struct wdmCanBeRanged<glm::vec3 > { static const bool value=true; };
-template<> struct wdmCanBeRanged<glm::vec4 > { static const bool value=true; };
 template<> inline const char* wdmTypename<glm::ivec2>() { return wdmTypename<wdmInt32x2>(); }
 template<> inline const char* wdmTypename<glm::ivec3>() { return wdmTypename<wdmInt32x3>(); }
 template<> inline const char* wdmTypename<glm::ivec4>() { return wdmTypename<wdmInt32x4>(); }

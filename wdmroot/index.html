@@ -6,6 +6,7 @@
  <style type="text/css">
  .data_children {margin:2px 2px 2px 10px;}
  .data_type {margin:0px 5px 0px 5px;}
+ .data_inputs {display:inline-block;}
  .data_control {display:inline-block;}
  .numeric_slider {width:100px; height:8px;}
  input.numeric {width:95px;}
@@ -35,7 +36,7 @@ var create_integer_input = function(type) {
     i.setAttribute("onblur", "this.lockUpdate=false");
     i.setAttribute("onchange", "this.parentNode.handleChange()");
     var s = document.createElement("div");
-    s.setAttribute("class", "data_control");
+    s.setAttribute("class", "data_inputs");
     s.appendChild(i);
     s.inputNode = i;
     s.setValue = function(v) { if(!this.inputNode.lockUpdate) this.inputNode.value=v.toString(); }
@@ -153,55 +154,17 @@ var DataInputCreators = {
 
 var create_control_common = function(node)
 {
-    if(node.dataChildren.length) {
-        node.setValue = function(v) { var d=this.dataChildren; for(var i=0; i<d.length; ++i){d[i].setValue(v[i]);} }
-        node.getValue = function() { var t=[]; this.dataChildren.each(function(c){t.push(c.getValue());}); return t; }
-        node.setRange = function(r) { this.dataChildren.each(function(c){c.setRange(r);}); };
-        node.makeReadOnly = function() { this.dataChildren.each(function(c){c.makeReadOnly();}) }
-    }
-    else {
-        node.setValue = function(v) { this.dataChildren.setValue(v); }
-        node.getValue = function() { return this.dataChildren.getValue(); }
-        node.setRange = function(r) { this.dataChildren.setRange(r); };
-        node.makeReadOnly = function() { this.dataChildren.makeReadOnly(); }
-    }
+    node.setValue = function(v) { this.dataChildren.setValue(v); }
+    node.getValue = function() { return this.dataChildren.getValue(); }
+    node.setRange = function(r) { this.dataChildren.setRange(r); };
+    node.makeReadOnly = function() { this.dataChildren.makeReadOnly(); }
 }
 
 var create_scalar_control = function(type, data)
 {
-    var d = document.createElement("span");
-
-    d.setAttribute("class", type);
-    var len = data.length;
-    if(len) {
-        d.dataChildren = [];
-        for(var i=0; i<len; ++i) {
-            var t = DataInputCreators[type]();
-            t.arrayIndex = i;
-            d.appendChild(t);
-            d.dataChildren.push(t);
-        }
-        d.handleChange = function(n) {
-            postCommand(data.id.toString()+"->at(" + n.arrayIndex + "," + n.getValue() + ")");
-        }
-    }
-    else {
-        var t = DataInputCreators[type]();
-        d.appendChild(t);
-        d.dataChildren = t;
-        d.handleChange = function(n) {
-            postCommand(data.id.toString()+"->set(" + this.getValue() + ")");
-        }
-    }
-    create_control_common(d);
-    return d;
-}
-
-var create_string_control = function(type, data)
-{
-    var d = document.createElement("span");
-    d.setAttribute("class", type);
     var t = DataInputCreators[type]();
+    var d = document.createElement("span");
+    d.setAttribute("class", type);
     d.appendChild(t);
     d.dataChildren = t;
     d.handleChange = function(n) {
@@ -211,54 +174,127 @@ var create_string_control = function(type, data)
     return d;
 }
 
-var creater_vector_control = function(type, num_elements, data)
+var create_string_control = function(type, data)
 {
+    var t = DataInputCreators[type]();
     var d = document.createElement("span");
-    d.numElements = num_elements;
-    d.setAttribute("class", type+"x"+num_elements);
-    for(var i=0; i<num_elements; ++i) {
-        d.appendChild(DataInputCreators[type]());
+    d.setAttribute("class", type);
+    t.dataControl = d;
+    d.appendChild(t);
+    d.dataChildren = t;
+    d.handleChange = function(n) {
+        postCommand(data.id.toString()+"->set(" + this.getValue() + ")");
     }
+    create_control_common(d);
+    return d;
+}
+
+var create_array1_control = function(type, num_elements, data)
+{
+    var d = document.createElement("div");
+    d.setAttribute("class", "data_control "+type+"x"+num_elements);
+
+    var dataChildren = [];
+    for(var i=0; i<num_elements; ++i) {
+        var t = DataInputCreators[type]();
+        t.dataControl = d;
+        t.arrayIndex = i;
+        d.appendChild(t);
+        dataChildren.push(t);
+    }
+    d.dataChildren = dataChildren;
+
     d.setValue = function(v) {
-        for(var i=0; i<this.numElements; ++i) {
-            this.children[i].setValue(v[i]);
+        for(var i=0; i<this.dataChildren.length; ++i) {
+            this.dataChildren[i].setValue(v[i]);
         }
     }
     d.getValue = function() {
         var r = "[";
-        for(var i=0; i<this.numElements; ++i) {
-            r += this.children[i].getValue();
-            if(i+1!=this.numElements) { r+=","; }
+        for(var i=0; i<this.dataChildren.length; ++i) {
+            r += this.dataChildren[i].getValue();
+            if(i+1!=this.dataChildren.length) { r+=","; }
         }
         r += "]";
         return r;
     }
     d.setRange = function(r) {
-        for(var i=0; i<this.numElements; ++i) {
-            this.children[i].setRange([r[0][i], r[1][i]]);
+        for(var i=0; i<this.dataChildren.length; ++i) {
+            this.dataChildren[i].setRange(r);
         }
     }
     d.makeReadOnly = function() {
-        for(var i=0; i<this.numElements; ++i) {
-            this.children[i].makeReadOnly();
+        for(var i=0; i<this.dataChildren.length; ++i) {
+            this.dataChildren[i].makeReadOnly();
         }
     }
     d.handleChange = function(n) {
-        postCommand(data.id.toString()+"->set(" + this.getValue() + ")");
+        var value = this.dataChildren[n.arrayIndex].getValue();
+        postCommand(data.id.toString()+"->at(" + n.arrayIndex + "," + value + ")");
     }
+
+    return d;
+}
+
+var create_array2_control = function(type, dy, dx, data)
+{
+    var d = document.createElement("div");
+    d.setAttribute("class", "data_control "+type+"["+dy+"]["+dx+"]");
+
+    d.dataChildren = [];
+    for(var i=0; i<dy; ++i) {
+        var t = create_array1_control(type, dx, data);
+        t.arrayIndex = i;
+        t.dataControl = d;
+        t.handleChange = function(n) { this.parentNode.handleChange(this); }
+        d.appendChild(t);
+        d.dataChildren.push(t);
+        d.appendChild(document.createElement("br"));
+    }
+    d.setValue = function(v) {
+        for(var i=0; i<this.dataChildren.length; ++i) {
+            this.dataChildren[i].setValue(v[i]);
+        }
+    }
+    d.getValue = function() {
+        var r = "[";
+        for(var i=0; i<this.dataChildren.length; ++i) {
+            r += this.dataChildren[i].getValue();
+            if(i+1!=this.dataChildren.length) { r+=","; }
+        }
+        r += "]";
+        return r;
+    }
+    d.setRange = function(r) {
+        for(var i=0; i<this.dataChildren.length; ++i) {
+            this.dataChildren[i].setRange(r);
+        }
+    }
+    d.makeReadOnly = function() {
+        for(var i=0; i<this.dataChildren.length; ++i) {
+            this.dataChildren[i].makeReadOnly();
+        }
+    }
+    d.handleChange = function(n) {
+        var value = this.dataChildren[n.arrayIndex].getValue();
+        postCommand(data.id.toString()+"->at(" + n.arrayIndex + "," + value + ")");
+    }
+
     return d;
 }
 
 var DataControlCreators = {
-    "int8":     function(data) { return create_scalar_control("int8", data); },
-    "int16":    function(data) { return create_scalar_control("int16", data); },
-    "int32":    function(data) { return create_scalar_control("int32", data); },
-    "uint8":    function(data) { return create_scalar_control("uint8", data); },
-    "uint16":   function(data) { return create_scalar_control("uint16", data); },
-    "uint32":   function(data) { return create_scalar_control("uint32", data); },
-    "bool":     function(data) { return create_scalar_control("bool", data); },
-    "float32":  function(data) { return create_scalar_control("float32", data); },
-    "float64":  function(data) { return create_scalar_control("float32", data); },
+    "int8":     function(data) { return data.length ? create_array1_control("int8",   data.length, data) : create_scalar_control("int8",   data); },
+    "int16":    function(data) { return data.length ? create_array1_control("int16",  data.length, data) : create_scalar_control("int16",  data); },
+    "int32":    function(data) { return data.length ? create_array1_control("int32",  data.length, data) : create_scalar_control("int32",  data); },
+    "int64":    function(data) { return data.length ? create_array1_control("int64",  data.length, data) : create_scalar_control("int64",  data); },
+    "uint8":    function(data) { return data.length ? create_array1_control("uint8",  data.length, data) : create_scalar_control("uint8",  data); },
+    "uint16":   function(data) { return data.length ? create_array1_control("uint16", data.length, data) : create_scalar_control("uint16", data); },
+    "uint32":   function(data) { return data.length ? create_array1_control("uint32", data.length, data) : create_scalar_control("uint32", data); },
+    "uint64":   function(data) { return data.length ? create_array1_control("uint64", data.length, data) : create_scalar_control("uint64", data); },
+    "bool":     function(data) { return data.length ? create_array1_control("bool",   data.length, data) : create_scalar_control("bool",   data); },
+    "float32":  function(data) { return data.length ? create_array1_control("float32",data.length, data) : create_scalar_control("float32",data); },
+    "float64":  function(data) { return data.length ? create_array1_control("float32",data.length, data) : create_scalar_control("float32",data); },
 
     "char" :    function(data) { return create_string_control("char", data); },
     "char*" :   function(data) { return create_string_control("char*", data); },
@@ -267,17 +303,17 @@ var DataControlCreators = {
     "string" :  function(data) { return create_string_control("string", data); },
     "wstring" : function(data) { return create_string_control("wstring", data); },
 
-    "int32x2":  function(data) { return creater_vector_control("int32", 2, data); },
-    "int32x3":  function(data) { return creater_vector_control("int32", 3, data); },
-    "int32x4":  function(data) { return creater_vector_control("int32", 4, data); },
-    "float32x2":function(data) { return creater_vector_control("float32", 2, data); },
-    "float32x3":function(data) { return creater_vector_control("float32", 3, data); },
-    "float32x4":function(data) { return creater_vector_control("float32", 4, data); },
+    "int32x2":  function(data) { return data.length ? create_array2_control("int32", data.length, 2, data) : create_array1_control("int32", 2, data); },
+    "int32x3":  function(data) { return data.length ? create_array2_control("int32", data.length, 3, data) : create_array1_control("int32", 3, data); },
+    "int32x4":  function(data) { return data.length ? create_array2_control("int32", data.length, 4, data) : create_array1_control("int32", 4, data); },
+    "float32x2":function(data) { return data.length ? create_array2_control("float32", data.length, 2, data) : create_array1_control("float32", 2, data); },
+    "float32x3":function(data) { return data.length ? create_array2_control("float32", data.length, 3, data) : create_array1_control("float32", 3, data); },
+    "float32x4":function(data) { return data.length ? create_array2_control("float32", data.length, 4, data) : create_array1_control("float32", 4, data); },
 
-    //"float32x2x2":createFloatControl,
-    //"float32x3x3":createFloatControl,
-    //"float32x4x3":createFloatControl,
-    //"float32x4x4":createFloatControl,
+    "float32x2x2": function(data) { return create_array2_control("float32", 2, 2, data); },
+    "float32x3x3": function(data) { return create_array2_control("float32", 3, 3, data); },
+    "float32x4x3": function(data) { return create_array2_control("float32", 4, 3, data); },
+    "float32x4x4": function(data) { return create_array2_control("float32", 4, 4, data); },
 }
 
 function getOrCreateNode(parent, data)
