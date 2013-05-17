@@ -362,37 +362,35 @@ function getOrCreateNode(parent, data)
         prop.appendChild(name);
 
         if(data.type!=null) {
-            var dataType = document.createElement("span");
-            dataType.setAttribute("class", "data_type");
+            var span = document.createElement("span");
+            span.setAttribute("class", "data_type");
             var typename = data.type;
             if(data.length!=null) { typename+="["+data.length+"]"; }
-            dataType.appendChild(document.createTextNode("("+typename+")"));
-            prop.appendChild(dataType);
+            span.appendChild(document.createTextNode("("+typename+")"));
+            prop.appendChild(span);
 
-            var inp = DataControlCreators[data.type](data);
-            if(data.range) { inp.setRange(data.range); }
-            if(data.readonly) { inp.makeReadOnly(); }
-            node.appendChild(inp);
-            node.dataNode = inp;
+            var control = DataControlCreators[data.type](data);
+            if(data.range) { control.setRange(data.range); }
+            if(data.readonly) { control.makeReadOnly(); }
+            node.appendChild(control);
+            node.dataNode = control;
         }
         if(data.callable) {
             node.argNodes = [];
-            node.getArgs = function() {
-                var r = "";
-                for(var i=0; i<this.argNodes.length; ++i) {
-                    if(i!=0) { r+=","; }
-                    r += this.argNodes[i].getValue();
-                }
-                return r;
-            }
             for(var i=0; i<data.argTypes.length; ++i) {
-                var inp = DataControlCreators[data.argTypes[i]](data);
-                inp.argIndex = i;
-                inp.handleChange = function(n) {
+                var argtype = data.argTypes[i];
+                var span = document.createElement("span");
+                span.setAttribute("class", "data_type");
+                span.appendChild(document.createTextNode("arg"+(i+1)+"("+argtype+")"));
+                prop.appendChild(span);
+
+                var control = DataControlCreators[argtype](data);
+                control.argIndex = i;
+                control.handleChange = function(n) {
                     postCommand(data.id.toString()+"->arg(" + this.argIndex + "," + this.getValue() + ")");
                 }
-                prop.appendChild(inp);
-                node.argNodes.push(inp);
+                prop.appendChild(control);
+                node.argNodes.push(control);
             }
             var button = document.createElement("input");
             button.setAttribute("type", "button");
