@@ -362,7 +362,7 @@ wdmSystem::~wdmSystem()
     m_end_flag = true;
 
     if(m_server) {
-        m_server->stopAll(false);
+        m_server->stop();
         while(m_server->currentThreads()>0) {
             clearRequests();
             Poco::Thread::sleep(5);
@@ -442,19 +442,19 @@ void wdmSystem::createJSON(wdmString &out, const wdmID *nodes, uint32_t num_node
     out.resize(m_conf.json_reserve_size);
     size_t s = 0;
     for(;;) {
-        s += snprintf(&out[0]+s, out.size()-s, "[");
+        s += wdmSNPrintf(&out[0]+s, out.size()-s, "[");
         {
             bool  first = true;
             for(size_t i=0; i<num_nodes; ++i) {
                 node_cont::iterator p = m_nodes.find(nodes[i]);
                 if(p!=m_nodes.end()) {
-                    if(!first) { s += snprintf(&out[0]+s, out.size()-s, ", "); }
+                    if(!first) { s += wdmSNPrintf(&out[0]+s, out.size()-s, ", "); }
                     s += p->second->jsonize(&out[0]+s, out.size()-s, 1);
                 }
                 first = false;
             }
         }
-        s += snprintf(&out[0]+s, out.size()-s, "]");
+        s += wdmSNPrintf(&out[0]+s, out.size()-s, "]");
 
         if(s==out.size()) {
             out.resize(out.size()*2);

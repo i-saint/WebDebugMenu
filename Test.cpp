@@ -35,6 +35,8 @@ public:
         wdmAddNode(p+"/dir2/m_wcharstr", &m_wcharstr);
         wdmAddNode(p+"/dir2/dir3/property_charstr", this, &Test::getCharStr);
         wdmAddNode(p+"/dir2/print()", &Test::print, this);
+        wdmAddNode(p+"/func1()", &Test::func1, this);
+        wdmAddNode(p+"/func2()", &Test::func2, this);
     }
 
     ~Test()
@@ -45,6 +47,9 @@ public:
     void setI32(const int &v) { m_i32=v; }
     const int& getI32() const { return m_i32; }
     const char* getCharStr() const { return m_charstr; }
+
+    void func1(int a) { printf("func1: %d\n", a); }
+    void func2(int a, int b) { printf("func2: %d %d\n", a, b); }
 
     void print() const
     {

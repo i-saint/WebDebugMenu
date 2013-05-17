@@ -367,6 +367,21 @@ function getOrCreateNode(parent, data)
             node.dataNode = inp;
         }
         if(data.callable) {
+            node.argNodes = [];
+            node.getArgs = function() {
+                var r = "";
+                for(var i=0; i<this.argNodes.length; ++i) {
+                    if(i!=0) { r+=","; }
+                    r += this.argNodes[i].getValue();
+                }
+                return r;
+            }
+            data.argTypes.each(function(a){
+                var inp = DataControlCreators[a](data);
+                prop.appendChild(inp);
+                node.argNodes.push(inp);
+            });
+
             var button = document.createElement("input");
             button.setAttribute("type", "button");
             button.setAttribute("onclick", "handleCall("+data.id+")");
@@ -486,7 +501,8 @@ function setVisibility(id)
 
 function handleCall(id)
 {
-    postCommand(id.toString()+"->call()");
+    var node = $("node"+id);
+    postCommand(id.toString()+"->call("+node.getArgs()+")");
 }
 
 function postCommand(values)
