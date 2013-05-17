@@ -15,6 +15,7 @@ public:
         snwprintf(m_wcharstr, _countof(m_wcharstr), L"test wcharstr");
         m_m128[0] = m_m128[1] = m_m128[2] = _mm_set_ps(0.0f, 1.0f, 2.0f, 3.0f);
         wdmScope( wdmString p = wdmFormat("Test0x%p", this); );
+        wdmScope( wdmString p2 = wdmFormat("Test0x%p/Depth", this); );
         wdmAddNode(p+"/m_i32", &m_i32, 100, 500);
         wdmAddNode(p+"/m_i32a", &m_i32a, 0, 100);
         wdmAddNode(p+"/property_i32", this, &Test::getI32, &Test::setI32, 0, 500);
@@ -25,8 +26,8 @@ public:
         wdmAddNode(p+"/m_m128", &m_m128, 0.0f, 10.0f);
         wdmAddNode(p+"/m_charstr", &m_charstr);
         wdmAddNode(p+"/m_wcharstr", &m_wcharstr);
-        wdmAddNode(p+"/property_charstr", this, &Test::getCharStr);
-        wdmAddNode(p+"/print()", &Test::print, this);
+        wdmAddNode(p2+"/property_charstr", this, &Test::getCharStr);
+        wdmAddNode(p2+"/print()", &Test::print, this);
     }
 
     ~Test()

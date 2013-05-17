@@ -61,7 +61,7 @@ public:
     void        addEvent(const wdmEventData &e);
     void        flushEvent();
 
-    wdmString&  createJSONData();
+    wdmString&  createJSONData(const wdmID *nodes, size_t num_nodes);
 
 private:
     static wdmSystem *s_inst;
@@ -153,7 +153,7 @@ private:
 template<class F>
 void EachInputValue(Poco::Net::HTTPServerRequest &request, const F &f)
 {
-    if(!request.hasContentLength() || request.getContentLength()>1024*64) {
+    if(!request.hasContentLength() || request.getContentLength()>1024*4) {
         return;
     }
     size_t size = (size_t)request.getContentLength();
@@ -170,6 +170,34 @@ void EachInputValue(Poco::Net::HTTPServerRequest &request, const F &f)
     for(;;) {
         if(std::regex_search(content.c_str()+pos, m, reg)) {
             f(m[1].str().c_str(), m[2].str().c_str());
+            pos += m.position()+m.length();
+        }
+        else {
+            break;
+        }
+    }
+}
+
+template<class F>
+void EachNodeValue(Poco::Net::HTTPServerRequest &request, const F &f)
+{
+    if(!request.hasContentLength() || request.getContentLength()>1024*4) {
+        return;
+    }
+    size_t size = (size_t)request.getContentLength();
+    std::istream& stream = request.stream();
+    std::string encoded_content;
+    std::string content;
+    encoded_content.resize(size);
+    stream.read(&encoded_content[0], size);
+    Poco::URI::decode(encoded_content, content);
+
+    std::regex reg("(\\d+)");
+    std::cmatch m;
+    size_t pos = 0;
+    for(;;) {
+        if(std::regex_search(content.c_str()+pos, m, reg)) {
+            f(m[1].str().c_str());
             pos += m.position()+m.length();
         }
         else {
@@ -198,7 +226,12 @@ public:
             ostr.write("ok", 3);
         }
         else if(request.getURI()=="/data") {
-            const wdmString &json = wdmSystem::getInstance()->createJSONData();
+            std::vector<wdmID> nodes;
+            EachNodeValue(request, [&](const char *id){
+                nodes.push_back(std::atoi(id));
+            });
+
+            const wdmString &json = wdmSystem::getInstance()->createJSONData(nodes.empty() ? NULL : &nodes[0], nodes.size());
             response.setContentType("application/json");
             response.setContentLength(json.size());
             std::ostream &ostr = response.send();
@@ -342,21 +375,37 @@ void wdmSystem::flushEvent()
     m_events.clear();
 }
 
-wdmString& wdmSystem::createJSONData()
+wdmString& wdmSystem::createJSONData(const wdmID *nodes, size_t num_nodes)
 {
     Poco::Mutex::ScopedLock lock(m_mutex);
     m_json.resize(m_json.capacity());
-    size_t ret = 0;
+    size_t s = 0;
     for(;;) {
-        ret = m_root->jsonize(&m_json[0], m_json.size(), true);
-        if(ret==m_json.size()) {
+        s += snprintf(&m_json[0]+s, m_json.size()-s, "[");
+        if(num_nodes==0) {
+            s += m_root->jsonize(&m_json[0]+s, m_json.size()-s, 1);
+        }
+        else {
+            bool  first = true;
+            for(size_t i=0; i<num_nodes; ++i) {
+                node_cont::iterator p = m_nodes.find(nodes[i]);
+                if(p!=m_nodes.end()) {
+                    if(!first) { s += snprintf(&m_json[0]+s, m_json.size()-s, ", "); }
+                    s += p->second->jsonize(&m_json[0]+s, m_json.size()-s, 1);
+                }
+                first = false;
+            }
+        }
+        s += snprintf(&m_json[0]+s, m_json.size()-s, "]");
+
+        if(s==m_json.size()) {
             m_json.resize(m_json.size()*2);
         }
         else {
             break;
         }
     }
-    m_json.resize(ret);
+    m_json.resize(s);
     return m_json;
 }
 
