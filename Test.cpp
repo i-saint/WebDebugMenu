@@ -1,5 +1,12 @@
-﻿#include <windows.h>
+﻿// created by i-saint
+// distributed under Creative Commons Attribution (CC BY) license.
+// https://github.com/i-saint/WebDebugMenu
+
+#include <windows.h>
 #include <intrin.h>
+#include <cstdio>
+
+//#define wdmDisable
 #include "WebDebugMenu.h"
 
 class Test
@@ -11,8 +18,8 @@ public:
         , m_b(true)
         , m_f32(10.0f)
     {
-        snprintf(m_charstr, _countof(m_charstr), "test charstr");
-        snwprintf(m_wcharstr, _countof(m_wcharstr), L"test wcharstr");
+        _snprintf(m_charstr, _countof(m_charstr), "test charstr");
+        _snwprintf(m_wcharstr, _countof(m_wcharstr), L"test wcharstr");
         m_m128[0] = m_m128[1] = m_m128[2] = _mm_set_ps(0.0f, 1.0f, 2.0f, 3.0f);
         wdmScope( wdmString p = wdmFormat("Test0x%p", this); );
         wdmScope( wdmString p2 = wdmFormat("Test0x%p/Depth", this); );

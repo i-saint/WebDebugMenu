@@ -1,4 +1,8 @@
-﻿#include <Poco/Mutex.h>
+﻿// created by i-saint
+// distributed under Creative Commons Attribution (CC BY) license.
+// https://github.com/i-saint/WebDebugMenu
+
+#include <Poco/Mutex.h>
 #include <Poco/AtomicCounter.h>
 #include <Poco/File.h>
 #include <Poco/URI.h>

@@ -1,4 +1,8 @@
-﻿#ifndef WebDebugMenu_h
+﻿// created by i-saint
+// distributed under Creative Commons Attribution (CC BY) license.
+// https://github.com/i-saint/WebDebugMenu
+
+#ifndef WebDebugMenu_h
 #define WebDebugMenu_h
 
 #ifndef wdmDisable
