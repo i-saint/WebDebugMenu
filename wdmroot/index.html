@@ -243,6 +243,15 @@ var create_array1_control = function(type, num_elements, data)
     return d;
 }
 
+var create_vector_control = function(type, num_elements, data)
+{
+    var d = create_array1_control(type, num_elements, data);
+    d.handleChange = function() {
+        postCommand(data.id.toString()+"->set(" + this.getValue() + ")");
+    }
+    return d;
+}
+
 var create_array2_control = function(type, dy, dx, data)
 {
     var d = document.createElement("div");
@@ -310,12 +319,12 @@ var DataControlCreators = {
     "string" :  function(data) { return create_string_control("string", data); },
     "wstring" : function(data) { return create_string_control("wstring", data); },
 
-    "int32x2":  function(data) { return data.length ? create_array2_control("int32", data.length, 2, data) : create_array1_control("int32", 2, data); },
-    "int32x3":  function(data) { return data.length ? create_array2_control("int32", data.length, 3, data) : create_array1_control("int32", 3, data); },
-    "int32x4":  function(data) { return data.length ? create_array2_control("int32", data.length, 4, data) : create_array1_control("int32", 4, data); },
-    "float32x2":function(data) { return data.length ? create_array2_control("float32", data.length, 2, data) : create_array1_control("float32", 2, data); },
-    "float32x3":function(data) { return data.length ? create_array2_control("float32", data.length, 3, data) : create_array1_control("float32", 3, data); },
-    "float32x4":function(data) { return data.length ? create_array2_control("float32", data.length, 4, data) : create_array1_control("float32", 4, data); },
+    "int32x2":  function(data) { return data.length ? create_array2_control("int32", data.length, 2, data) : create_vector_control("int32", 2, data); },
+    "int32x3":  function(data) { return data.length ? create_array2_control("int32", data.length, 3, data) : create_vector_control("int32", 3, data); },
+    "int32x4":  function(data) { return data.length ? create_array2_control("int32", data.length, 4, data) : create_vector_control("int32", 4, data); },
+    "float32x2":function(data) { return data.length ? create_array2_control("float32", data.length, 2, data) : create_vector_control("float32", 2, data); },
+    "float32x3":function(data) { return data.length ? create_array2_control("float32", data.length, 3, data) : create_vector_control("float32", 3, data); },
+    "float32x4":function(data) { return data.length ? create_array2_control("float32", data.length, 4, data) : create_vector_control("float32", 4, data); },
 
     "float32x2x2": function(data) { return create_array2_control("float32", 2, 2, data); },
     "float32x3x3": function(data) { return create_array2_control("float32", 3, 3, data); },
@@ -376,12 +385,15 @@ function getOrCreateNode(parent, data)
                 }
                 return r;
             }
-            data.argTypes.each(function(a){
-                var inp = DataControlCreators[a](data);
+            for(var i=0; i<data.argTypes.length; ++i) {
+                var inp = DataControlCreators[data.argTypes[i]](data);
+                inp.argIndex = i;
+                inp.handleChange = function(n) {
+                    postCommand(data.id.toString()+"->arg(" + this.argIndex + "," + this.getValue() + ")");
+                }
                 prop.appendChild(inp);
                 node.argNodes.push(inp);
-            });
-
+            }
             var button = document.createElement("input");
             button.setAttribute("type", "button");
             button.setAttribute("onclick", "handleCall("+data.id+")");
@@ -501,8 +513,7 @@ function setVisibility(id)
 
 function handleCall(id)
 {
-    var node = $("node"+id);
-    postCommand(id.toString()+"->call("+node.getArgs()+")");
+    postCommand(id.toString()+"->call()");
 }
 
 function postCommand(values)

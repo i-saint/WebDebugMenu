@@ -69,6 +69,7 @@ extern "C" {
 
 
 // 以下はユーザー側にのみ見え、WebDebugMenu.dll からは一切触れないコード
+#pragma region wdmImplRegion
 
 #ifdef _MSC_VER
 #   define wdmSNPrintf    _snprintf
@@ -330,9 +331,8 @@ struct wdmHandleSet
     bool operator()(const wdmEvent &evt, T *value)
     {
         if(strncmp(evt.command, "set(", 4)==0) {
-            if(wdmParse(evt.command+4, *value)) {
-                return true;
-            }
+            wdmParse(evt.command+4, *value);
+            return true;
         }
         return false;
     }
@@ -349,8 +349,7 @@ struct wdmHandleAt
     {
         if(strncmp(evt.command, "at(", 3)==0) {
             int i = atoi(evt.command+3);
-            int pos=3;
-            for(;;++pos) { if(evt.command[pos]==',') { ++pos; break;} }
+            size_t pos=3; wdmNextSeparator(evt.command, pos); ++pos;
             if(wdmParse(evt.command+pos, (*value)[i])) {
                 return true;
             }
@@ -541,8 +540,7 @@ public:
     typedef std::function<R (A0)>  func_t;
     typedef typename wdmRemoveConstReference<A0>::type a0_t;
 
-    wdmFunctionNode1(func_t func)
-        : m_func(func)
+    wdmFunctionNode1(func_t func) : m_func(func), m_a0()
     {}
 
     virtual size_t jsonize(char *out, size_t len, int recursion) const
@@ -556,10 +554,17 @@ public:
 
     virtual bool handleEvent(const wdmEvent &evt)
     {
-        if(strncmp(evt.command, "call(", 5)==0) {
-            a0_t a0;
-            if(m_func && wdmParse(evt.command+5, a0)) {
-                m_func(a0);
+        if(strncmp(evt.command, "arg(", 4)==0) {
+            int i = atoi(evt.command+4);
+            size_t pos=4; wdmNextSeparator(evt.command, pos); ++pos;
+            switch(i) {
+            case 0: wdmParse(evt.command+pos, m_a0); break;
+            }
+            return true;
+        }
+        else if(strncmp(evt.command, "call(", 5)==0) {
+            if(m_func) {
+                m_func(m_a0);
                 return true;
             }
         }
@@ -568,6 +573,7 @@ public:
 
 private:
     func_t m_func;
+    a0_t m_a0;
 };
 
 template<class R, class A0, class A1>
@@ -579,8 +585,7 @@ public:
     typedef typename wdmRemoveConstReference<A0>::type a0_t;
     typedef typename wdmRemoveConstReference<A1>::type a1_t;
 
-    wdmFunctionNode2(func_t func)
-        : m_func(func)
+    wdmFunctionNode2(func_t func) : m_func(func) , m_a0(), m_a1()
     {}
 
     virtual size_t jsonize(char *out, size_t len, int recursion) const
@@ -595,13 +600,18 @@ public:
 
     virtual bool handleEvent(const wdmEvent &evt)
     {
-        if(strncmp(evt.command, "call(", 5)==0) {
-            a0_t a0;
-            a1_t a1;
-            size_t a0pos = 5;
-            size_t a1pos = a0pos; wdmNextSeparator(evt.command, a1pos); ++a1pos;
-            if(m_func && wdmParse(evt.command+a0pos, a0) && wdmParse(evt.command+a1pos, a1)) {
-                m_func(a0, a1);
+        if(strncmp(evt.command, "arg(", 4)==0) {
+            int i = atoi(evt.command+4);
+            size_t pos=4; wdmNextSeparator(evt.command, pos); ++pos;
+            switch(i) {
+            case 0: wdmParse(evt.command+pos, m_a0); break;
+            case 1: wdmParse(evt.command+pos, m_a1); break;
+            }
+            return true;
+        }
+        else if(strncmp(evt.command, "call(", 5)==0) {
+            if(m_func) {
+                m_func(m_a0, m_a1);
                 return true;
             }
         }
@@ -610,9 +620,11 @@ public:
 
 private:
     func_t m_func;
+    a0_t m_a0;
+    a1_t m_a1;
 };
 
-
+#pragma endregion
 
 inline wdmString wdmFormat(const char *fmt, ...)
 {
@@ -635,7 +647,7 @@ inline void wdmAddNode(const wdmString &path, T *value)
 template<class T, class T2>
 inline void wdmAddNode(const wdmString &path, T *value, T2 min_value, T2 max_value)
 {
-    _wdmGetRootNode()->addChild(path.c_str(), new wdmDataNode<T, T2>(value, wdmRange<T>(min_value, max_value)));
+    _wdmGetRootNode()->addChild(path.c_str(), new wdmDataNode<T, T2>(value, wdmRange<T2>(min_value, max_value)));
 }
 
 // array node
@@ -732,8 +744,7 @@ inline void wdmEraseNode(const wdmString &path)
 }
 
 
-
-
+#pragma region wdmImplRegion2
 // built-in types
 template<> inline const char* wdmTypename<int8_t >() { return "int8"; }
 template<> inline const char* wdmTypename<int16_t>() { return "int16"; }
@@ -880,7 +891,7 @@ template<> inline size_t wdmToS(char *text, size_t len, glm::vec2  v) { return w
 template<> inline size_t wdmToS(char *text, size_t len, glm::vec3  v) { return wdmToS<wdmFloat32x3>(text, len, (const wdmFloat32x3&)v); }
 template<> inline size_t wdmToS(char *text, size_t len, glm::vec4  v) { return wdmToS<wdmFloat32x4>(text, len, (const wdmFloat32x4&)v); }
 #endif // glm_glm
-
+#pragma endregion
 
 #else // wdmDisable
 
