@@ -70,12 +70,14 @@ private:
 int main(int argc, char *argv[])
 {
     wdmInitialize();
-
-    Test test;
-    for(;;) {
-        wdmFlush();
-        ::Sleep(100);
+    {
+        Test test;
+        bool end_flag = false;
+        wdmAddNode("end_flag", &end_flag);
+        while(!end_flag) {
+            wdmFlush();
+            ::Sleep(100);
+        }
     }
-
     wdmFinalize();
 }

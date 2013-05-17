@@ -96,6 +96,9 @@ public:
 
     void        requestJSON(wdmJSONRequest &request);
     void        createJSON(wdmString &out, const wdmID *nodes, uint32_t num_nodes);
+    void        clearRequests();
+
+    bool        getEndFlag() const { return m_end_flag; }
 
 private:
     static wdmSystem *s_inst;
@@ -128,7 +131,7 @@ inline size_t GetModulePath(char *out_path, size_t len)
 {
     HMODULE mod = 0;
     ::GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, (LPCSTR)&GetModulePath, &mod);
-    DWORD size = ::GetModuleFileNameA(mod, out_path, len);
+    DWORD size = ::GetModuleFileNameA(mod, out_path, (DWORD)len);
     return size;
 }
 
@@ -261,12 +264,13 @@ public:
         }
         else if(request.getURI()=="/data") {
             std::vector<wdmID> nodes;
+            nodes.push_back(_wdmGetRootNode()->getID());
             EachNodeValue(request, [&](const char *id){
                 nodes.push_back(std::atoi(id));
             });
 
             wdmString json;
-            wdmJSONRequest request = {false, false, &json, nodes.empty() ? NULL : &nodes[0], nodes.size()};
+            wdmJSONRequest request = {false, false, &json, nodes.empty() ? NULL : &nodes[0], (uint32_t)nodes.size()};
             wdmSystem::getInstance()->requestJSON(request);
             while(!request.done) { Poco::Thread::sleep(2); }
             if(request.canceled) { json="[]"; }
@@ -284,6 +288,8 @@ class wdmRequestHandlerFactory : public Poco::Net::HTTPRequestHandlerFactory
 public:
     virtual Poco::Net::HTTPRequestHandler* createRequestHandler(const Poco::Net::HTTPServerRequest &request)
     {
+        if(wdmSystem::getInstance()->getEndFlag()) { return NULL; }
+
         if(request.getURI() == "/") {
             return new wdmFileRequestHandler(std::string(GetCurrentModuleDirectory())+std::string(s_root_dir)+"/index.html");
         }
@@ -297,7 +303,7 @@ public:
                 return new wdmFileRequestHandler(path);
             }
             else {
-                return 0;
+                return NULL;
             }
         }
     }
@@ -353,12 +359,13 @@ wdmSystem::wdmSystem()
 
 wdmSystem::~wdmSystem()
 {
+    m_end_flag = true;
+
     if(m_server) {
-        m_end_flag = true;
         m_server->stopAll(false);
-        while(m_server->currentConnections()>0 || m_server->currentThreads()>0) {
-            flushEvent();
-            Poco::Thread::sleep(3);
+        while(m_server->currentThreads()>0) {
+            clearRequests();
+            Poco::Thread::sleep(5);
         }
         delete m_server;
         m_server = NULL;
@@ -397,6 +404,7 @@ void wdmSystem::unregisterNode( wdmNode *node )
 
 void wdmSystem::addEvent( const wdmEventData &e )
 {
+    if(m_end_flag) { return; }
     Poco::Mutex::ScopedLock lock(m_mutex);
     m_events.push_back(e);
 }
@@ -424,6 +432,7 @@ void wdmSystem::flushEvent()
 
 void wdmSystem::requestJSON(wdmJSONRequest &request)
 {
+    if(m_end_flag) { request.done=request.canceled=true; return; }
     Poco::Mutex::ScopedLock lock(m_mutex);
     m_jsons.push_back(&request);
 }
@@ -434,10 +443,7 @@ void wdmSystem::createJSON(wdmString &out, const wdmID *nodes, uint32_t num_node
     size_t s = 0;
     for(;;) {
         s += snprintf(&out[0]+s, out.size()-s, "[");
-        if(num_nodes==0) {
-            s += m_root->jsonize(&out[0]+s, out.size()-s, 1);
-        }
-        else {
+        {
             bool  first = true;
             for(size_t i=0; i<num_nodes; ++i) {
                 node_cont::iterator p = m_nodes.find(nodes[i]);
@@ -458,6 +464,19 @@ void wdmSystem::createJSON(wdmString &out, const wdmID *nodes, uint32_t num_node
         }
     }
     out.resize(s);
+}
+
+void wdmSystem::clearRequests()
+{
+    Poco::Mutex::ScopedLock lock(m_mutex);
+
+    m_events.clear();
+
+    for(json_cont::iterator ji=m_jsons.begin(); ji!=m_jsons.end(); ++ji) {
+        wdmJSONRequest &req = **ji;
+        req.done = req.canceled = true;
+    }
+    m_jsons.clear();
 }
 
 

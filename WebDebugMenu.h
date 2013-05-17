@@ -19,7 +19,11 @@
 #   define wdmIntermodule
 #else // wdmDynamic
 #   define wdmIntermodule __declspec(dllimport)
-#   pragma comment(lib, "WebDebugMenu.lib")
+#   ifdef _WIN64
+#       pragma comment(lib, "WebDebugMenu64.lib")
+#   else // _WIN64
+#       pragma comment(lib, "WebDebugMenu.lib")
+#   endif // _WIN64
 #endif
 
 // wdmEvent, wdmNode は dll を跨ぐ可能性がある

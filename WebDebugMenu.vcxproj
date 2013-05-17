@@ -87,6 +87,7 @@
     <LibraryPath>external\lib\win64;$(DXSDK_DIR)lib\x86;$(LibraryPath)</LibraryPath>
     <IntDir>_tmp\$(ProjectName)_$(Platform)$(Configuration)\</IntDir>
     <OutDir>$(ProjectDir)\</OutDir>
+    <TargetName>$(ProjectName)64</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -101,6 +102,7 @@
     <LibraryPath>external\lib\win64;$(DXSDK_DIR)lib\x86;$(LibraryPath)</LibraryPath>
     <IntDir>_tmp\$(ProjectName)_$(Platform)$(Configuration)\</IntDir>
     <OutDir>$(ProjectDir)\</OutDir>
+    <TargetName>$(ProjectName)64</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
