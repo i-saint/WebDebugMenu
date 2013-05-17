@@ -450,8 +450,8 @@ void wdmSystem::createJSON(wdmString &out, const wdmID *nodes, uint32_t num_node
                 if(p!=m_nodes.end()) {
                     if(!first) { s += wdmSNPrintf(&out[0]+s, out.size()-s, ", "); }
                     s += p->second->jsonize(&out[0]+s, out.size()-s, 1);
+                    first = false;
                 }
-                first = false;
             }
         }
         s += wdmSNPrintf(&out[0]+s, out.size()-s, "]");
