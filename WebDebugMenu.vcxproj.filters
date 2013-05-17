@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="WebDebugMenu.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="WebDebugMenu.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="wdmroot">
+      <UniqueIdentifier>{93f407fb-78d1-4d64-b4dd-45d644709a33}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="wdmroot\index.html">
+      <Filter>wdmroot</Filter>
+    </None>
+  </ItemGroup>
+</Project>

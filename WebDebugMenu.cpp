@@ -32,17 +32,45 @@ struct wdmEventData
     }
 };
 
-struct wdmServerConfig
+struct wdmJSONRequest
+{
+    bool done;
+    bool canceled;
+    wdmString *json;
+    const wdmID *nodes;
+    uint32_t num_nodes;
+};
+
+struct wdmConfig
 {
     uint16_t port;
     uint16_t max_queue;
     uint16_t max_threads;
+    uint32_t json_reserve_size;
 
-    wdmServerConfig()
+    wdmConfig()
         : port(10002)
         , max_queue(100)
-        , max_threads(4)
+        , max_threads(2)
+        , json_reserve_size(1024*1024)
     {
+    }
+
+    bool load(const char *path)
+    {
+        if(FILE *f=fopen(path, "rb")) {
+            char buf[256];
+            while(fgets(buf, _countof(buf), f)) {
+                uint32_t t;
+                if     (sscanf(buf, "port: %d", &t)==1) { port=t; }
+                else if(sscanf(buf, "max_queue: %d", &t)==1) { max_queue=t; }
+                else if(sscanf(buf, "max_threads: %d", &t)==1) { max_threads=t; }
+                else if(sscanf(buf, "json_reserve_size: %d", &t)==1) { json_reserve_size=t; }
+            }
+            fclose(f);
+            return true;
+        }
+        return false;
     }
 };
 
@@ -51,6 +79,7 @@ class wdmSystem
 public:
     typedef std::map<wdmID, wdmNode*> node_cont;
     typedef std::vector<wdmEventData> event_cont;
+    typedef std::vector<wdmJSONRequest*> json_cont;
 
     static void         createInstance();
     static void         releaseInstance();
@@ -65,19 +94,20 @@ public:
     void        addEvent(const wdmEventData &e);
     void        flushEvent();
 
-    wdmString&  createJSONData(const wdmID *nodes, size_t num_nodes);
+    void        requestJSON(wdmJSONRequest &request);
+    void        createJSON(wdmString &out, const wdmID *nodes, uint32_t num_nodes);
 
 private:
     static wdmSystem *s_inst;
     node_cont m_nodes;
     event_cont m_events;
+    json_cont m_jsons;
     wdmNode *m_root;
     bool m_end_flag;
     Poco::AtomicCounter m_idgen;
     Poco::Mutex m_mutex;
-    wdmString m_json;
 
-    wdmServerConfig m_conf;
+    wdmConfig m_conf;
     Poco::Net::HTTPServer *m_server;
 };
 
@@ -235,13 +265,17 @@ public:
                 nodes.push_back(std::atoi(id));
             });
 
-            const wdmString &json = wdmSystem::getInstance()->createJSONData(nodes.empty() ? NULL : &nodes[0], nodes.size());
+            wdmString json;
+            wdmJSONRequest request = {false, false, &json, nodes.empty() ? NULL : &nodes[0], nodes.size()};
+            wdmSystem::getInstance()->requestJSON(request);
+            while(!request.done) { Poco::Thread::sleep(2); }
+            if(request.canceled) { json="[]"; }
+
             response.setContentType("application/json");
             response.setContentLength(json.size());
             std::ostream &ostr = response.send();
             ostr.write(&json[0], json.size());
         }
-
     }
 };
 
@@ -298,8 +332,8 @@ wdmSystem::wdmSystem()
     , m_server(NULL)
 {
     s_inst = this;
+    m_conf.load((std::string(GetCurrentModuleDirectory())+"wdmConfig.txt").c_str());
     m_root = new wdmNodeBase();
-    m_json.resize(1024*1024*16);
 
     if(!m_server) {
         Poco::Net::HTTPServerParams* params = new Poco::Net::HTTPServerParams;
@@ -323,7 +357,8 @@ wdmSystem::~wdmSystem()
         m_end_flag = true;
         m_server->stopAll(false);
         while(m_server->currentConnections()>0 || m_server->currentThreads()>0) {
-            ::Sleep(1);
+            flushEvent();
+            Poco::Thread::sleep(3);
         }
         delete m_server;
         m_server = NULL;
@@ -369,6 +404,7 @@ void wdmSystem::addEvent( const wdmEventData &e )
 void wdmSystem::flushEvent()
 {
     Poco::Mutex::ScopedLock lock(m_mutex);
+
     for(event_cont::iterator ei=m_events.begin(); ei!=m_events.end(); ++ei) {
         const wdmEventData e = *ei;
         node_cont::iterator ni = m_nodes.find(e.node);
@@ -377,40 +413,51 @@ void wdmSystem::flushEvent()
         }
     }
     m_events.clear();
+
+    for(json_cont::iterator ji=m_jsons.begin(); ji!=m_jsons.end(); ++ji) {
+        wdmJSONRequest &req = **ji;
+        createJSON(*req.json, req.nodes, req.num_nodes);
+        req.done = true;
+    }
+    m_jsons.clear();
 }
 
-wdmString& wdmSystem::createJSONData(const wdmID *nodes, size_t num_nodes)
+void wdmSystem::requestJSON(wdmJSONRequest &request)
 {
     Poco::Mutex::ScopedLock lock(m_mutex);
-    m_json.resize(m_json.capacity());
+    m_jsons.push_back(&request);
+}
+
+void wdmSystem::createJSON(wdmString &out, const wdmID *nodes, uint32_t num_nodes)
+{
+    out.resize(m_conf.json_reserve_size);
     size_t s = 0;
     for(;;) {
-        s += snprintf(&m_json[0]+s, m_json.size()-s, "[");
+        s += snprintf(&out[0]+s, out.size()-s, "[");
         if(num_nodes==0) {
-            s += m_root->jsonize(&m_json[0]+s, m_json.size()-s, 1);
+            s += m_root->jsonize(&out[0]+s, out.size()-s, 1);
         }
         else {
             bool  first = true;
             for(size_t i=0; i<num_nodes; ++i) {
                 node_cont::iterator p = m_nodes.find(nodes[i]);
                 if(p!=m_nodes.end()) {
-                    if(!first) { s += snprintf(&m_json[0]+s, m_json.size()-s, ", "); }
-                    s += p->second->jsonize(&m_json[0]+s, m_json.size()-s, 1);
+                    if(!first) { s += snprintf(&out[0]+s, out.size()-s, ", "); }
+                    s += p->second->jsonize(&out[0]+s, out.size()-s, 1);
                 }
                 first = false;
             }
         }
-        s += snprintf(&m_json[0]+s, m_json.size()-s, "]");
+        s += snprintf(&out[0]+s, out.size()-s, "]");
 
-        if(s==m_json.size()) {
-            m_json.resize(m_json.size()*2);
+        if(s==out.size()) {
+            out.resize(out.size()*2);
         }
         else {
             break;
         }
     }
-    m_json.resize(s);
-    return m_json;
+    out.resize(s);
 }
 
 
