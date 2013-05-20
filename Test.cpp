@@ -76,6 +76,7 @@ private:
 int main(int argc, char *argv[])
 {
     wdmInitialize();
+    setlocale(LC_ALL, "utf-8");
     {
         Test test;
         bool end_flag = false;
