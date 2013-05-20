@@ -749,9 +749,11 @@ inline void wdmEraseNode(const wdmString &path)
 template<> inline const char* wdmTypename<int8_t >() { return "int8"; }
 template<> inline const char* wdmTypename<int16_t>() { return "int16"; }
 template<> inline const char* wdmTypename<int32_t>() { return "int32"; }
+template<> inline const char* wdmTypename<int64_t>() { return "int64"; }
 template<> inline const char* wdmTypename<uint8_t >(){ return "uint8"; }
 template<> inline const char* wdmTypename<uint16_t>(){ return "uint16"; }
 template<> inline const char* wdmTypename<uint32_t>(){ return "uint32"; }
+template<> inline const char* wdmTypename<uint64_t>(){ return "uint64"; }
 template<> inline const char* wdmTypename<bool>()    { return "bool"; }
 template<> inline const char* wdmTypename<float>()   { return "float32"; }
 template<> inline const char* wdmTypename<double>()  { return "float64"; }
@@ -763,9 +765,11 @@ template<> inline const char* wdmTypename<wchar_t*>(){ return "wchar*"; }
 template<> inline bool wdmParse(const char *text, int8_t  &v)  { int32_t t;  if(sscanf(text, "%i", &t)==1){ v=t; return true; } return false; }
 template<> inline bool wdmParse(const char *text, int16_t &v)  { int32_t t;  if(sscanf(text, "%i", &t)==1){ v=t; return true; } return false; }
 template<> inline bool wdmParse(const char *text, int32_t &v)  { int32_t t;  if(sscanf(text, "%i", &t)==1){ v=t; return true; } return false; }
+template<> inline bool wdmParse(const char *text, int64_t &v)  { int64_t t;  if(sscanf(text, "%lli", &t)==1){ v=t; return true; } return false; }
 template<> inline bool wdmParse(const char *text, uint8_t  &v) { uint32_t t; if(sscanf(text, "%u", &t)==1){ v=t; return true; } return false; }
 template<> inline bool wdmParse(const char *text, uint16_t &v) { uint32_t t; if(sscanf(text, "%u", &t)==1){ v=t; return true; } return false; }
 template<> inline bool wdmParse(const char *text, uint32_t &v) { uint32_t t; if(sscanf(text, "%u", &t)==1){ v=t; return true; } return false; }
+template<> inline bool wdmParse(const char *text, uint64_t &v) { uint64_t t; if(sscanf(text, "%llu", &t)==1){ v=t; return true; } return false; }
 template<> inline bool wdmParse(const char *text, bool &v)     { int32_t t;  if(sscanf(text, "%i", &t)==1){ v=t!=0; return true; } return false; }
 template<> inline bool wdmParse(const char *text, float &v)    { return sscanf(text, "%f", &v)==1; }
 template<> inline bool wdmParse(const char *text, char &v)     { return false; }
@@ -776,9 +780,11 @@ template<> inline bool wdmParse(const char *text, wchar_t *&v) { return false; }
 template<> inline size_t wdmToS(char *out, size_t len, int8_t  v)  { return wdmSNPrintf(out, len, "%i", (int32_t)v); }
 template<> inline size_t wdmToS(char *out, size_t len, int16_t v)  { return wdmSNPrintf(out, len, "%i", (int32_t)v); }
 template<> inline size_t wdmToS(char *out, size_t len, int32_t v)  { return wdmSNPrintf(out, len, "%i", v); }
+template<> inline size_t wdmToS(char *out, size_t len, int64_t v)  { return wdmSNPrintf(out, len, "%lli", v); }
 template<> inline size_t wdmToS(char *out, size_t len, uint8_t  v) { return wdmSNPrintf(out, len, "%u", (uint32_t)v); }
 template<> inline size_t wdmToS(char *out, size_t len, uint16_t v) { return wdmSNPrintf(out, len, "%u", (uint32_t)v); }
 template<> inline size_t wdmToS(char *out, size_t len, uint32_t v) { return wdmSNPrintf(out, len, "%u", v); }
+template<> inline size_t wdmToS(char *out, size_t len, uint64_t v) { return wdmSNPrintf(out, len, "%llu", v); }
 template<> inline size_t wdmToS(char *out, size_t len, bool v)     { return wdmSNPrintf(out, len, "%i", (int32_t)v); }
 template<> inline size_t wdmToS(char *out, size_t len, float v)    { return wdmSNPrintf(out, len, "%f", v); }
 template<> inline size_t wdmToS(char *out, size_t len, double v)   { return wdmSNPrintf(out, len, "%lf", v); }

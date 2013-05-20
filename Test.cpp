@@ -4,6 +4,7 @@
 
 #include <windows.h>
 #include <intrin.h>
+#include <stdint.h>
 #include <cstdio>
 
 //#define wdmDisable
@@ -63,7 +64,7 @@ public:
 
 private:
     int m_i32;
-    int m_i32a[4];
+    int64_t m_i32a[4];
     const int m_ci32;
     bool m_b;
     float m_f32;
