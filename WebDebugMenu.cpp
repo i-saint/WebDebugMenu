@@ -13,8 +13,12 @@
 #include <Poco/Net/HTTPServerResponse.h>
 #include "WebDebugMenu.h"
 
+#ifdef _WIN32
 #pragma comment(lib, "psapi.lib")
+#pragma comment(lib, "shell32.lib")
 #include <psapi.h>
+#include <shellapi.h>
+#endif // _WIN32
 #include <regex>
 
 
@@ -41,38 +45,30 @@ struct wdmJSONRequest
     uint32_t num_nodes;
 };
 
-struct wdmConfig
+wdmConfig::wdmConfig()
+    : port(10002)
+    , max_queue(100)
+    , max_threads(2)
+    , json_reserve_size(1024*1024)
 {
-    uint16_t port;
-    uint16_t max_queue;
-    uint16_t max_threads;
-    uint32_t json_reserve_size;
+}
 
-    wdmConfig()
-        : port(10002)
-        , max_queue(100)
-        , max_threads(2)
-        , json_reserve_size(1024*1024)
-    {
-    }
-
-    bool load(const char *path)
-    {
-        if(FILE *f=fopen(path, "rb")) {
-            char buf[256];
-            while(fgets(buf, _countof(buf), f)) {
-                uint32_t t;
-                if     (sscanf(buf, "port: %d", &t)==1) { port=t; }
-                else if(sscanf(buf, "max_queue: %d", &t)==1) { max_queue=t; }
-                else if(sscanf(buf, "max_threads: %d", &t)==1) { max_threads=t; }
-                else if(sscanf(buf, "json_reserve_size: %d", &t)==1) { json_reserve_size=t; }
-            }
-            fclose(f);
-            return true;
+bool wdmConfig::load(const char *path)
+{
+    if(FILE *f=fopen(path, "rb")) {
+        char buf[256];
+        while(fgets(buf, _countof(buf), f)) {
+            uint32_t t;
+            if     (sscanf(buf, "port: %d", &t)==1) { port=t; }
+            else if(sscanf(buf, "max_queue: %d", &t)==1) { max_queue=t; }
+            else if(sscanf(buf, "max_threads: %d", &t)==1) { max_threads=t; }
+            else if(sscanf(buf, "json_reserve_size: %d", &t)==1) { json_reserve_size=t; }
         }
-        return false;
+        fclose(f);
+        return true;
     }
-};
+    return false;
+}
 
 class wdmSystem
 {
@@ -87,18 +83,19 @@ public:
 
     wdmSystem();
     ~wdmSystem();
-    wdmID       generateID();
-    wdmNode*    getRootNode() const;
-    void        registerNode(wdmNode *node);
-    void        unregisterNode(wdmNode *node);
-    void        addEvent(const wdmEventData &e);
-    void        flushEvent();
+    wdmID            generateID();
+    wdmNode*         getRootNode() const;
+    const wdmConfig* getConfig() const;
+    void             registerNode(wdmNode *node);
+    void             unregisterNode(wdmNode *node);
+    void             addEvent(const wdmEventData &e);
+    void             flushEvent();
 
-    void        requestJSON(wdmJSONRequest &request);
-    void        createJSON(wdmString &out, const wdmID *nodes, uint32_t num_nodes);
-    void        clearRequests();
+    void             requestJSON(wdmJSONRequest &request);
+    void             createJSON(wdmString &out, const wdmID *nodes, uint32_t num_nodes);
+    void             clearRequests();
 
-    bool        getEndFlag() const { return m_end_flag; }
+    bool             getEndFlag() const { return m_end_flag; }
 
 private:
     static wdmSystem *s_inst;
@@ -386,6 +383,11 @@ wdmNode* wdmSystem::getRootNode() const
     return m_root;
 }
 
+const wdmConfig* wdmSystem::getConfig() const
+{
+    return &m_conf;
+}
+
 void wdmSystem::registerNode( wdmNode *node )
 {
     if(node!=NULL) {
@@ -483,12 +485,34 @@ void wdmSystem::clearRequests()
 extern "C" {
     wdmIntermodule void     wdmInitialize() { wdmSystem::createInstance(); }
     wdmIntermodule void     wdmFinalize()   { wdmSystem::releaseInstance(); }
-    wdmIntermodule void     wdmFlush()      { wdmSystem::getInstance()->flushEvent(); }
 
-    wdmIntermodule wdmID    _wdmGenerateID()                            { return wdmSystem::getInstance()->generateID(); }
-    wdmIntermodule wdmNode* _wdmGetRootNode()                           { return wdmSystem::getInstance()->getRootNode(); }
-    wdmIntermodule void     _wdmRegisterNode(wdmNode *node)             { wdmSystem::getInstance()->registerNode(node); }
-    wdmIntermodule void     _wdmUnregisterNode(wdmNode *node)           { wdmSystem::getInstance()->unregisterNode(node); }
+    wdmIntermodule void wdmFlush()
+    {
+        if(wdmSystem *sys = wdmSystem::getInstance()) {
+            sys->flushEvent();
+        }
+    }
+
+    wdmIntermodule void wdmOpenBrowser()
+    {
+        if(const wdmConfig *conf = wdmGetConfig()) {
+#ifdef _WIN32
+            char url[256];
+            sprintf(url, "http://localhost:%d", conf->port);
+            ::ShellExecuteA(NULL, "open", url, "", "", SW_SHOWDEFAULT);
+#endif // _WIN32
+        }
+    }
+    wdmIntermodule const wdmConfig* wdmGetConfig()
+    {
+        wdmSystem *sys = wdmSystem::getInstance();
+        return sys ? sys->getConfig() : nullptr;
+    }
+
+    wdmIntermodule wdmID    _wdmGenerateID()                    { return wdmSystem::getInstance()->generateID(); }
+    wdmIntermodule wdmNode* _wdmGetRootNode()                   { return wdmSystem::getInstance()->getRootNode(); }
+    wdmIntermodule void     _wdmRegisterNode(wdmNode *node)     { wdmSystem::getInstance()->registerNode(node); }
+    wdmIntermodule void     _wdmUnregisterNode(wdmNode *node)   { wdmSystem::getInstance()->unregisterNode(node); }
 };
 
 

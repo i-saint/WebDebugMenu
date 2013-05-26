@@ -6,9 +6,11 @@
 #include <intrin.h>
 #include <stdint.h>
 #include <cstdio>
+#include <clocale>
+#include <algorithm>
 
 //#define wdmDisable
-#include "WebDebugMenu.h"
+#include "../WebDebugMenu.h"
 
 class Test
 {
@@ -19,6 +21,7 @@ public:
         , m_b(true)
         , m_f32(10.0f)
     {
+        std::fill_n(m_i32a, _countof(m_i32a), 0);
         _snprintf(m_charstr, _countof(m_charstr), "test charstr");
         _snwprintf(m_wcharstr, _countof(m_wcharstr), L"test wcharstr");
 
@@ -75,8 +78,10 @@ private:
 
 int main(int argc, char *argv[])
 {
-    wdmInitialize();
     setlocale(LC_ALL, "utf-8");
+    wdmInitialize();
+    wdmOpenBrowser();
+
     {
         Test test;
         bool end_flag = false;
