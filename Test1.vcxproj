@@ -68,7 +68,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <IncludePath>$(SolutionDir);$(SolutionDir)\external;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir);$(SolutionDir)\external\lib\win32;$(DXSDK_DIR)lib\x86;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir);$(DXSDK_DIR)lib\x86;$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
     <OutDir>$(ProjectDir)</OutDir>
     <IntDir>_tmp\$(ProjectName)_$(Platform)$(Configuration)\</IntDir>
@@ -76,7 +76,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(SolutionDir);$(SolutionDir)\external;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir);$(SolutionDir)\external\lib\win64;$(DXSDK_DIR)lib\x86;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir);$(DXSDK_DIR)lib\x86;$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
     <OutDir>$(ProjectDir)\</OutDir>
     <IntDir>_tmp\$(ProjectName)_$(Platform)$(Configuration)\</IntDir>
@@ -84,7 +84,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>$(SolutionDir);$(SolutionDir)\external;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir);$(SolutionDir)\external\lib\win32;$(DXSDK_DIR)lib\x86;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir);$(DXSDK_DIR)lib\x86;$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
     <OutDir>$(ProjectDir)\</OutDir>
     <IntDir>_tmp\$(ProjectName)_$(Platform)$(Configuration)\</IntDir>
@@ -92,7 +92,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(SolutionDir);$(SolutionDir)\external;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir);$(SolutionDir)\external\lib\win64;$(DXSDK_DIR)lib\x86;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir);$(DXSDK_DIR)lib\x86;$(LibraryPath)</LibraryPath>
     <TargetName>$(ProjectName)</TargetName>
     <OutDir>$(ProjectDir)\</OutDir>
     <IntDir>_tmp\$(ProjectName)_$(Platform)$(Configuration)\</IntDir>
