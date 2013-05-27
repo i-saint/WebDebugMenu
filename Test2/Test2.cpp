@@ -175,7 +175,7 @@ void Render();
 //--------------------------------------------------------------------------------------
 HRESULT InitWindow( HINSTANCE hInstance, int nCmdShow )
 {
-    const wchar_t *wndclassname = L"DOL_Test2_class";
+    const wchar_t *wndclassname = L"wdm_Test2_class";
 
     // Register class
     WNDCLASSEX wcex;
@@ -198,7 +198,7 @@ HRESULT InitWindow( HINSTANCE hInstance, int nCmdShow )
     g_hInst = hInstance;
     RECT rc = { 0, 0, 500, 500 };
     AdjustWindowRect( &rc, WS_OVERLAPPEDWINDOW, FALSE );
-    g_hWnd = CreateWindow( wndclassname, L"Dynamic Obj Loader Test", WS_OVERLAPPEDWINDOW,
+    g_hWnd = CreateWindow( wndclassname, L"WebDebugMenu Test", WS_OVERLAPPEDWINDOW,
                            CW_USEDEFAULT, CW_USEDEFAULT, rc.right - rc.left, rc.bottom - rc.top, NULL, NULL, hInstance,
                            NULL );
     if( !g_hWnd )

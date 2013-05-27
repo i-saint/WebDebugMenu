@@ -84,7 +84,8 @@ void UpdateParticles()
     // 相互に押し返し
     Particle *particles = g_particles;
     size_t num_particles = g_num_particles;
-    for(size_t ri=0; ri<num_particles; ++ri) {
+    #pragma omp parallel for
+    for(int ri=0; ri<num_particles; ++ri) {
         Particle &rp = particles[ri];
         XMFLOAT3 rpos = rp.position;
         float rradius = rp.radius;
@@ -104,7 +105,8 @@ void UpdateParticles()
 
     // 中心に吸い寄せる
     {
-        for(size_t ri=0; ri<num_particles; ++ri) {
+        #pragma omp parallel for
+        for(int ri=0; ri<num_particles; ++ri) {
             Particle &rp = particles[ri];
             XMFLOAT3 dir = Normalize(g_gravity_center - rp.position);
             rp.velocity += dir * g_accel;
@@ -112,7 +114,9 @@ void UpdateParticles()
     }
 
     // 床とのバウンド
-    for(size_t ri=0; ri<num_particles; ++ri) {
+
+    #pragma omp parallel for
+    for(int ri=0; ri<num_particles; ++ri) {
         Particle &rp = particles[ri];
         rp.velocity.y -= g_gravity;
         float bottom = rp.position.y - rp.radius;
@@ -121,7 +125,8 @@ void UpdateParticles()
     }
 
     // 速度を適用
-    for(size_t ri=0; ri<num_particles; ++ri) {
+    #pragma omp parallel for
+    for(int ri=0; ri<num_particles; ++ri) {
         Particle &rp = particles[ri];
         rp.position += rp.velocity;
         rp.velocity *= g_deccel;

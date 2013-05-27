@@ -10,7 +10,7 @@
 #include <cstdio>
 #include "WebDebugMenu.h"
 
-#define MAX_PARTICLES 4096
+#define MAX_PARTICLES 6144
 
 struct Particle
 {
