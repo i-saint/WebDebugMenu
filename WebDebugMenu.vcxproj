@@ -22,6 +22,7 @@
     <ClInclude Include="WebDebugMenu.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="EnumMemberVariables.cpp" />
     <ClCompile Include="WebDebugMenu.cpp" />
   </ItemGroup>
   <ItemGroup>

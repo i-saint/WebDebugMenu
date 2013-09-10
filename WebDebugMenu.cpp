@@ -19,6 +19,10 @@
 #include <psapi.h>
 #include <shellapi.h>
 #endif // _WIN32
+#ifndef wdmDisableEnumMemberVariables
+#include <dbghelp.h>
+#pragma comment(lib, "dbghelp.lib")
+#endif // wdmDisableEnumMemberVariables
 #include <regex>
 
 
@@ -338,6 +342,12 @@ wdmSystem::wdmSystem()
     m_conf.load((std::string(GetCurrentModuleDirectory())+"wdmConfig.txt").c_str());
     m_root = new wdmNodeBase();
 
+#ifndef wdmDisableEnumMemberVariables
+    ::SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_DEBUG);
+    ::SymInitialize(::GetCurrentProcess(), NULL, TRUE);
+#endif // wdmDisableEnumMemberVariables
+
+
     if(!m_server) {
         Poco::Net::HTTPServerParams* params = new Poco::Net::HTTPServerParams;
         params->setMaxQueued(m_conf.max_queue);
@@ -483,17 +493,17 @@ void wdmSystem::clearRequests()
 
 
 extern "C" {
-    wdmIntermodule void     wdmInitialize() { wdmSystem::createInstance(); }
-    wdmIntermodule void     wdmFinalize()   { wdmSystem::releaseInstance(); }
+    wdmAPI void wdmInitialize() { wdmSystem::createInstance(); }
+    wdmAPI void wdmFinalize()   { wdmSystem::releaseInstance(); }
 
-    wdmIntermodule void wdmFlush()
+    wdmAPI void wdmFlush()
     {
         if(wdmSystem *sys = wdmSystem::getInstance()) {
             sys->flushEvent();
         }
     }
 
-    wdmIntermodule void wdmOpenBrowser()
+    wdmAPI void wdmOpenBrowser()
     {
         if(const wdmConfig *conf = wdmGetConfig()) {
 #ifdef _WIN32
@@ -503,16 +513,16 @@ extern "C" {
 #endif // _WIN32
         }
     }
-    wdmIntermodule const wdmConfig* wdmGetConfig()
+    wdmAPI const wdmConfig* wdmGetConfig()
     {
         wdmSystem *sys = wdmSystem::getInstance();
         return sys ? sys->getConfig() : nullptr;
     }
 
-    wdmIntermodule wdmID    _wdmGenerateID()                    { return wdmSystem::getInstance()->generateID(); }
-    wdmIntermodule wdmNode* _wdmGetRootNode()                   { return wdmSystem::getInstance()->getRootNode(); }
-    wdmIntermodule void     _wdmRegisterNode(wdmNode *node)     { wdmSystem::getInstance()->registerNode(node); }
-    wdmIntermodule void     _wdmUnregisterNode(wdmNode *node)   { wdmSystem::getInstance()->unregisterNode(node); }
+    wdmAPI wdmID    _wdmGenerateID()                    { return wdmSystem::getInstance()->generateID(); }
+    wdmAPI wdmNode* _wdmGetRootNode()                   { return wdmSystem::getInstance()->getRootNode(); }
+    wdmAPI void     _wdmRegisterNode(wdmNode *node)     { wdmSystem::getInstance()->registerNode(node); }
+    wdmAPI void     _wdmUnregisterNode(wdmNode *node)   { wdmSystem::getInstance()->unregisterNode(node); }
 };
 
 

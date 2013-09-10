@@ -5,6 +5,12 @@
 #ifndef WebDebugMenu_h
 #define WebDebugMenu_h
 
+// WebDebugMenu に関連する関数などを完全に消し去る。非デバッグ時用
+//#define wdmDisable
+
+// EnumMemberVariables 関連を無効化する。C++11 が使えない場合や dbghelp に依存したくない場合用
+//#define wdmDisableEnumMemberVariables
+
 #ifndef wdmDisable
 #include <string>
 #include <vector>
@@ -14,17 +20,39 @@
 #include <stdint.h>
 
 #if   defined(wdmDLL_Impl)
-#   define wdmIntermodule __declspec(dllexport)
+#   define wdmAPI __declspec(dllexport)
 #elif defined(wdmStatic)
-#   define wdmIntermodule
+#   define wdmAPI
 #else // wdmDynamic
-#   define wdmIntermodule __declspec(dllimport)
+#   define wdmAPI __declspec(dllimport)
 #   ifdef _WIN64
 #       pragma comment(lib, "WebDebugMenu64.lib")
 #   else // _WIN64
 #       pragma comment(lib, "WebDebugMenu.lib")
 #   endif // _WIN64
 #endif
+
+#ifndef wdmDisableEnumMemberVariables
+#include <map>
+
+struct wdmMemberInfo
+{
+    void *this_pointer;     // this
+    void *base_pointer;     // 親 class のメンバを指してる場合、親 class の先頭を指す
+    void *value;            // メンバ変数へのポインタ
+    const char *this_type;  // this の型
+    const char *class_name; // メンバ変数が所属する class。親 class のメンバの場合 this_type とは違うものになる
+    const char *type_name;  // メンバ変数の型名
+    const char *value_name; // メンバ変数の名前
+};
+typedef std::function<void (const wdmMemberInfo&)> wdmMemberInfoCallback;
+
+wdmAPI bool wdmGetClassName(void *_this, char *out, size_t len);
+wdmAPI bool wdmEnumMemberVariablesByTypeName(const char *classname, const wdmMemberInfoCallback &f);
+wdmAPI bool wdmEnumMemberVariablesByTypeName(const char *classname, void *_this, const wdmMemberInfoCallback &f);
+wdmAPI bool wdmEnumMemberVariablesByPointer(void *_this, const wdmMemberInfoCallback &f);
+#endif // wdmDisableEnumMemberVariables
+
 
 // wdmEvent, wdmNode は dll を跨ぐ可能性がある
 // このため、これらは STL のコンテナなどには触れないようにする
@@ -67,18 +95,18 @@ public:
 };
 
 extern "C" {
-    wdmIntermodule void             wdmInitialize();
-    wdmIntermodule void             wdmFinalize();
-    wdmIntermodule void             wdmFlush();
+    wdmAPI void             wdmInitialize();
+    wdmAPI void             wdmFinalize();
+    wdmAPI void             wdmFlush();
 
-    wdmIntermodule void             wdmOpenBrowser();
-    wdmIntermodule const wdmConfig* wdmGetConfig();
+    wdmAPI void             wdmOpenBrowser();
+    wdmAPI const wdmConfig* wdmGetConfig();
 
     // 内部実装用
-    wdmIntermodule wdmID    _wdmGenerateID();
-    wdmIntermodule wdmNode* _wdmGetRootNode();
-    wdmIntermodule void     _wdmRegisterNode(wdmNode *node);
-    wdmIntermodule void     _wdmUnregisterNode(wdmNode *node);
+    wdmAPI wdmID    _wdmGenerateID();
+    wdmAPI wdmNode* _wdmGetRootNode();
+    wdmAPI void     _wdmRegisterNode(wdmNode *node);
+    wdmAPI void     _wdmUnregisterNode(wdmNode *node);
 };
 
 
@@ -337,7 +365,7 @@ template<class T>
 struct wdmRange<T, false>
 {
     wdmRange() {}
-    size_t jsonize(char *out, size_t len) const { return 0; }
+    size_t jsonize(char* /*out*/, size_t /*len*/) const { return 0; }
 };
 
 template<class T, bool available=!wdmIsReadOnly<T>::value>
@@ -796,6 +824,7 @@ template<> inline bool wdmParse(const char *text, uint32_t &v) { uint32_t t; if(
 template<> inline bool wdmParse(const char *text, uint64_t &v) { uint64_t t; if(sscanf(text, "%llu", &t)==1){ v=t; return true; } return false; }
 template<> inline bool wdmParse(const char *text, bool &v)     { int32_t t;  if(sscanf(text, "%i", &t)==1){ v=t!=0; return true; } return false; }
 template<> inline bool wdmParse(const char *text, float &v)    { return sscanf(text, "%f", &v)==1; }
+template<> inline bool wdmParse(const char *text, double &v)   { return sscanf(text, "%lf", &v)==1; }
 template<> inline bool wdmParse(const char *, char &)     { return false; }
 template<> inline bool wdmParse(const char *, wchar_t &)  { return false; }
 template<> inline bool wdmParse(const char *, char *&)    { return false; }
@@ -921,7 +950,6 @@ template<> inline size_t wdmToS(char *text, size_t len, glm::vec2  v) { return w
 template<> inline size_t wdmToS(char *text, size_t len, glm::vec3  v) { return wdmToS<wdmFloat32x3>(text, len, (const wdmFloat32x3&)v); }
 template<> inline size_t wdmToS(char *text, size_t len, glm::vec4  v) { return wdmToS<wdmFloat32x4>(text, len, (const wdmFloat32x4&)v); }
 #endif // glm_glm
-#pragma endregion
 
 // xnamath
 #ifdef __XNAMATH_H__
@@ -936,6 +964,61 @@ template<> inline size_t wdmToS(char *text, size_t len, XMFLOAT3 v) { return wdm
 template<> inline size_t wdmToS(char *text, size_t len, XMFLOAT4 v) { return wdmToS<wdmFloat32x4>(text, len, (const wdmFloat32x4&)v); }
 #endif // __XNAMATH_H__
 
+
+#ifndef wdmDisableEnumMemberVariables
+
+inline void wdmAddEMVNode(const wdmString &path, void *_this, const char *class_name)
+{
+    wdmEnumMemberVariablesByTypeName(class_name, _this, [&](const wdmMemberInfo &mi){
+        typedef std::map<std::string, std::function<void (const wdmMemberInfo &mi)> > handler_table;
+        static handler_table s_handlers;
+        if(s_handlers.empty()) {
+            s_handlers[   "int8"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, (  int8_t*)mi.value); };
+            s_handlers[  "uint8"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, ( uint8_t*)mi.value); };
+            s_handlers[  "int16"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, ( int16_t*)mi.value); };
+            s_handlers[ "uint16"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, (uint16_t*)mi.value); };
+            s_handlers[  "int32"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, ( int32_t*)mi.value); };
+            s_handlers[ "uint32"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, (uint32_t*)mi.value); };
+            s_handlers[  "int64"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, ( int64_t*)mi.value); };
+            s_handlers[ "uint64"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, (uint64_t*)mi.value); };
+            s_handlers["float32"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, (   float*)mi.value); };
+            s_handlers["float64"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, (  double*)mi.value); };
+            s_handlers[   "bool"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, (    bool*)mi.value); };
+#if defined(_INCLUDED_MM2) || defined(_XMMINTRIN_H_INCLUDED)
+            s_handlers["__m128i"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, (wdmInt32x4*)mi.value); };
+            s_handlers[ "__m128"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, (wdmFloat32x4*)mi.value); };
+#endif // defined(_INCLUDED_MM2) || defined(_XMMINTRIN_H_INCLUDED)
+#ifdef glm_glm
+            s_handlers["glm::ivec2"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, (wdmInt32x2*)mi.value); };
+            s_handlers["glm::ivec3"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, (wdmInt32x3*)mi.value); };
+            s_handlers["glm::ivec4"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, (wdmInt32x4*)mi.value); };
+            s_handlers[ "glm::vec2"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, (wdmFloat32x2*)mi.value); };
+            s_handlers[ "glm::vec3"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, (wdmFloat32x3*)mi.value); };
+            s_handlers[ "glm::vec4"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, (wdmFloat32x4*)mi.value); };
+#endif // glm_glm
+#ifdef __XNAMATH_H__
+            s_handlers["XMFLOAT2"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, (wdmFloat32x2*)mi.value); };
+            s_handlers["XMFLOAT3"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, (wdmFloat32x3*)mi.value); };
+            s_handlers["XMFLOAT4"] = [&](const wdmMemberInfo &mi){ wdmAddNode(path+"/"+mi.value_name, (wdmFloat32x4*)mi.value); };
+#endif // __XNAMATH_H__
+        }
+        auto p = s_handlers.find(mi.type_name);
+        if(p!=s_handlers.end()) {
+            p->second(mi);
+        }
+    });
+}
+
+inline void wdmAddEMVNode(const wdmString &path, void *_this)
+{
+    char class_name[4096];
+    if(wdmGetClassName(_this, class_name, sizeof(class_name))) {
+        wdmAddEMVNode(path, _this, class_name);
+    }
+}
+#endif // wdmDisableEnumMemberVariables
+#pragma endregion
+
 #else // wdmDisable
 
 #define wdmInitialize(...)
@@ -946,6 +1029,7 @@ template<> inline size_t wdmToS(char *text, size_t len, XMFLOAT4 v) { return wdm
 #define wdmScope(...)
 #define wdmAddNode(...)
 #define wdmEraseNode(...)
+#define wdmAddEMVNode(...)
 
 #endif // wdmDisable
 #endif // WebDebugMenu_h

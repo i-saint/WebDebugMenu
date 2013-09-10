@@ -85,6 +85,7 @@ int main(int argc, char *argv[])
     {
         Test test;
         bool end_flag = false;
+        wdmAddEMVNode("EMVTest", &test, "Test");
         wdmAddNode("end_flag", &end_flag);
         while(!end_flag) {
             wdmFlush();
