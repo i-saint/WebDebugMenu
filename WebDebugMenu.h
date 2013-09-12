@@ -410,7 +410,7 @@ struct wdmHandleAt
 };
 template<class T>
 struct wdmHandleAt<T, false> {
-    bool operator()(const wdmEvent &, const T *, size_t num) { return false; }
+    bool operator()(const wdmEvent &, const T *, size_t) { return false; }
     bool operator()(const wdmEvent &, const T *) { return false; }
 };
 
@@ -471,9 +471,12 @@ public:
     {
         size_t s = 0;
         s += wdmSNPrintf(out+s, len-s, "{\"id\":%d, \"name\":\"%s\", \"type\":\"%s\", \"length\":%d, ", getID(), getName(), wdmTypename<value_t>(), (int)m_num);
+#pragma warning(push)
+#pragma warning(disable:4127)
         if(wdmIsReadOnly<T>::value) {
             s += wdmSNPrintf(out+s, len-s, "\"readonly\":true, ");
         }
+#pragma warning(pop)
         {
             s += wdmSNPrintf(out+s, len-s, "\"value\":");
             s += wdmToS(out+s, len-s, m_value, m_num);
