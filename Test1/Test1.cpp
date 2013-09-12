@@ -12,6 +12,13 @@
 //#define wdmDisable
 #include "../WebDebugMenu.h"
 
+struct teststruct {
+    int int_value;
+    float float_value;
+
+    teststruct() : int_value(10), float_value(10.0f) {}
+};
+
 class Test
 {
 public:
@@ -74,6 +81,8 @@ private:
     __m128 m_m128;
     char m_charstr[16];
     wchar_t m_wcharstr[16];
+    teststruct m_struct[2];
+    std::string m_str;
 };
 
 int main(int argc, char *argv[])
@@ -85,7 +94,7 @@ int main(int argc, char *argv[])
     {
         Test test;
         bool end_flag = false;
-        wdmAddEMVNode("EMVTest", &test, "Test");
+        wdmAddMemberNodes("test", &test, "Test");
         wdmAddNode("end_flag", &end_flag);
         while(!end_flag) {
             wdmFlush();

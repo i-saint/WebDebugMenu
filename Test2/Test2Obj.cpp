@@ -83,13 +83,13 @@ void UpdateParticles()
 {
     // 相互に押し返し
     Particle *particles = g_particles;
-    size_t num_particles = g_num_particles;
+    int num_particles = g_num_particles;
     #pragma omp parallel for
     for(int ri=0; ri<num_particles; ++ri) {
         Particle &rp = particles[ri];
         XMFLOAT3 rpos = rp.position;
         float rradius = rp.radius;
-        for(size_t si=0; si<num_particles; ++si) {
+        for(int si=0; si<num_particles; ++si) {
             Particle &sp = particles[si];
             float uradius = rradius + sp.radius;
             XMFLOAT3 diff = sp.position - rpos;

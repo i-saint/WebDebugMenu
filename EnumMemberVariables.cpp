@@ -158,7 +158,10 @@ void EnumMemberVariables(EMVContext &ctx, DWORD t, const wdmMemberInfoCallback &
         if( ::SymGetTypeInfo(ctx.hprocess, ctx.modbase, t, TI_GET_OFFSET, &offset) &&
             ::SymGetTypeInfo(ctx.hprocess, ctx.modbase, t, TI_GET_TYPEID, &tid) )
         {
+            ULONG64 length = 0;
+            ::SymGetTypeInfo(ctx.hprocess, ctx.modbase, tid, TI_GET_LENGTH, &length);
             ctx.mi.value = (void*)((size_t)ctx.mi.base_pointer+offset);
+            ctx.mi.size = (size_t)length;
             GetSymbolTypeName(ctx, tid);
             ctx.current_type = ctx.tmp_name;
             GetSymbolName(ctx, t);
