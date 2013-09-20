@@ -13,6 +13,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Test2", "Test2.vcxproj", "{
 		{7CCD61E5-5F56-4050-BACC-1467972D2247} = {7CCD61E5-5F56-4050-BACC-1467972D2247}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestMemberNodes", "TestMemberNodes.vcxproj", "{F4ACDB26-C466-44FE-8447-AB3299BEDAF2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -57,6 +59,17 @@ Global
 		{D29C6982-A589-4081-89B1-91E78D7C41E2}.Release|Win32.Build.0 = Release|Win32
 		{D29C6982-A589-4081-89B1-91E78D7C41E2}.Release|x64.ActiveCfg = Release|x64
 		{D29C6982-A589-4081-89B1-91E78D7C41E2}.Release|x64.Build.0 = Release|x64
+		{F4ACDB26-C466-44FE-8447-AB3299BEDAF2}.Debug|Win32.ActiveCfg = Debug|Win32
+		{F4ACDB26-C466-44FE-8447-AB3299BEDAF2}.Debug|Win32.Build.0 = Debug|Win32
+		{F4ACDB26-C466-44FE-8447-AB3299BEDAF2}.Debug|x64.ActiveCfg = Debug|x64
+		{F4ACDB26-C466-44FE-8447-AB3299BEDAF2}.Debug|x64.Build.0 = Debug|x64
+		{F4ACDB26-C466-44FE-8447-AB3299BEDAF2}.Profile|Win32.ActiveCfg = Release|x64
+		{F4ACDB26-C466-44FE-8447-AB3299BEDAF2}.Profile|x64.ActiveCfg = Release|x64
+		{F4ACDB26-C466-44FE-8447-AB3299BEDAF2}.Profile|x64.Build.0 = Release|x64
+		{F4ACDB26-C466-44FE-8447-AB3299BEDAF2}.Release|Win32.ActiveCfg = Release|Win32
+		{F4ACDB26-C466-44FE-8447-AB3299BEDAF2}.Release|Win32.Build.0 = Release|Win32
+		{F4ACDB26-C466-44FE-8447-AB3299BEDAF2}.Release|x64.ActiveCfg = Release|x64
+		{F4ACDB26-C466-44FE-8447-AB3299BEDAF2}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
