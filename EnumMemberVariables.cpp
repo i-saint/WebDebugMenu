@@ -238,6 +238,7 @@ wdmAPI bool wdmGetClassName(void *_this, char *out, size_t len)
         ::UnDecorateSymbolName(sinfo->Name, vftable, MAX_SYM_NAME, UNDNAME_NAME_ONLY);
         if(char *colon=strstr(vftable, "::`vftable'")) {
             *colon = '\0';
+            strncpy(out, vftable, len);
             return true;
         }
     }
