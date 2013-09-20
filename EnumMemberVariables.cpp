@@ -225,6 +225,8 @@ bool EnumMemberVariablesImpl(EMVContext &ctx, const wdmMemberInfoCallback &f)
 
 } // namespace
 
+
+// _this: virtual 関数を持つオブジェクト
 wdmAPI bool wdmGetClassName(void *_this, char *out, size_t len)
 {
     char buf[sizeof(SYMBOL_INFO)+MAX_SYM_NAME];
