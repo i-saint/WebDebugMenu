@@ -51,9 +51,9 @@ public:
     wdmScope(
         void addDebugNodes()
         {
-            wdmAddNode("Camera/position", &m_eye, -20.0f, 20.0f);
-            wdmAddNode("Camera/focus", &m_focus, -20.0f, 20.0f);
-            wdmAddNode("Camera/fovy", &m_fovy, XMConvertToRadians(0.1f), XMConvertToRadians(180.0f));
+            wdmAddNode("Camera/position", &m_eye, wdmMakeRange(-20.0f, 20.0f));
+            wdmAddNode("Camera/focus", &m_focus, wdmMakeRange(-20.0f, 20.0f));
+            wdmAddNode("Camera/fovy", &m_fovy, wdmMakeRange(XMConvertToRadians(0.1f), XMConvertToRadians(180.0f)) );
         }
     )
 

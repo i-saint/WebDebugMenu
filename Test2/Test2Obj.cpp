@@ -51,12 +51,12 @@ void SetParticleRadius(float r)
 
 void InitializeParticles()
 {
-    wdmAddNode("Particle/num", &g_num_particles, 0, MAX_PARTICLES);
-    wdmAddNode("Particle/radius", &GetParticleRadius, &SetParticleRadius, 0.0f, 0.25f);
-    wdmAddNode("Particle/deccel", &g_deccel, 0.9f, 1.0f);
-    wdmAddNode("Particle/accel", &g_accel, 0.0001f, 0.01f);
-    wdmAddNode("Particle/gravity_center", &g_gravity_center, -20.0f, 20.0f);
-    wdmAddNode("Particle/gravity_strength", &g_gravity, 0.0f, 0.005f);
+    wdmAddNode("Particle/num", &g_num_particles, wdmMakeRange(0, MAX_PARTICLES));
+    wdmAddNode("Particle/radius", &GetParticleRadius, &SetParticleRadius, wdmMakeRange(0.0f, 0.25f));
+    wdmAddNode("Particle/deccel", &g_deccel, wdmMakeRange(0.9f, 1.0f));
+    wdmAddNode("Particle/accel", &g_accel, wdmMakeRange(0.0001f, 0.01f));
+    wdmAddNode("Particle/gravity_center", &g_gravity_center, wdmMakeRange(-20.0f, 20.0f));
+    wdmAddNode("Particle/gravity_strength", &g_gravity, wdmMakeRange(0.0f, 0.005f));
 
     g_num_particles = MAX_PARTICLES/2;
     g_pradius = 0.015f;
