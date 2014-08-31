@@ -32,6 +32,7 @@
 #       pragma comment(lib, "WebDebugMenu32.lib")
 #   endif // _WIN64
 #endif
+#define wdmCLinkage extern "C"
 
 #ifndef wdmDisableEnumMemberVariables
 #include <map>
@@ -49,10 +50,10 @@ struct wdmMemberInfo
 };
 typedef std::function<void (wdmMemberInfo&)> wdmMemberInfoCallback;
 
-wdmAPI bool wdmGetClassName(void *_this, char *out, size_t len);
-wdmAPI bool wdmEnumMemberVariablesByTypeName(const char *classname, const wdmMemberInfoCallback &f);
-wdmAPI bool wdmEnumMemberVariablesByTypeName(const char *classname, void *_this, const wdmMemberInfoCallback &f);
-wdmAPI bool wdmEnumMemberVariablesByPointer(void *_this, const wdmMemberInfoCallback &f);
+wdmCLinkage wdmAPI bool wdmGetClassName(void *_this, char *out, size_t len);
+wdmCLinkage wdmAPI bool wdmEnumMemberVariablesByTypeName(const char *classname, const wdmMemberInfoCallback &f);
+wdmCLinkage wdmAPI bool wdmEnumMemberVariablesByTypeName2(const char *classname, void *_this, const wdmMemberInfoCallback &f);
+wdmCLinkage wdmAPI bool wdmEnumMemberVariablesByPointer(void *_this, const wdmMemberInfoCallback &f);
 #endif // wdmDisableEnumMemberVariables
 
 
@@ -96,20 +97,18 @@ public:
     virtual bool        handleEvent(const wdmEvent &evt)=0;
 };
 
-extern "C" {
-    wdmAPI void             wdmInitialize();
-    wdmAPI void             wdmFinalize();
-    wdmAPI void             wdmFlush();
+wdmCLinkage wdmAPI void             wdmInitialize();
+wdmCLinkage wdmAPI void             wdmFinalize();
+wdmCLinkage wdmAPI void             wdmFlush();
 
-    wdmAPI void             wdmOpenBrowser();
-    wdmAPI const wdmConfig* wdmGetConfig();
+wdmCLinkage wdmAPI void             wdmOpenBrowser();
+wdmCLinkage wdmAPI const wdmConfig* wdmGetConfig();
 
-    // 内部実装用
-    wdmAPI wdmID    _wdmGenerateID();
-    wdmAPI wdmNode* _wdmGetRootNode();
-    wdmAPI void     _wdmRegisterNode(wdmNode *node);
-    wdmAPI void     _wdmUnregisterNode(wdmNode *node);
-};
+wdmCLinkage // 内部実装用
+wdmCLinkage wdmAPI wdmID    _wdmGenerateID();
+wdmCLinkage wdmAPI wdmNode* _wdmGetRootNode();
+wdmCLinkage wdmAPI void     _wdmRegisterNode(wdmNode *node);
+wdmCLinkage wdmAPI void     _wdmUnregisterNode(wdmNode *node);
 
 
 
@@ -391,7 +390,12 @@ struct wdmHandleSet
     bool operator()(const wdmEvent &evt, T *value, size_t num)
     {
         if(strncmp(evt.command, "set(", 4)==0) {
-            wdmParse(evt.command+4, value, num);
+            if (num==1) {
+                wdmParse(evt.command + 4, *value);
+            }
+            else {
+                wdmParse(evt.command + 4, value, num);
+            }
             return true;
         }
         return false;
@@ -1021,7 +1025,7 @@ template<> inline size_t wdmToS(char *text, size_t len, XMFLOAT4 v) { return wdm
 
 inline void wdmAddMemberNodes(const wdmString &path, void *_this, const char *class_name)
 {
-    wdmEnumMemberVariablesByTypeName(class_name, _this, [&](wdmMemberInfo &mi){
+    wdmEnumMemberVariablesByTypeName2(class_name, _this, [&](wdmMemberInfo &mi){
         typedef std::map<std::string, std::function<void (const wdmString &p, wdmMemberInfo &mi)> > handler_table;
         static handler_table s_handlers;
         if(s_handlers.empty()) {

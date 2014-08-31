@@ -492,38 +492,38 @@ void wdmSystem::clearRequests()
 }
 
 
-extern "C" {
-    wdmAPI void wdmInitialize() { wdmSystem::createInstance(); }
-    wdmAPI void wdmFinalize()   { wdmSystem::releaseInstance(); }
 
-    wdmAPI void wdmFlush()
-    {
-        if(wdmSystem *sys = wdmSystem::getInstance()) {
-            sys->flushEvent();
-        }
+wdmCLinkage wdmAPI void wdmInitialize() { wdmSystem::createInstance(); }
+wdmCLinkage wdmAPI void wdmFinalize()   { wdmSystem::releaseInstance(); }
+
+wdmCLinkage wdmAPI void wdmFlush()
+{
+    if(wdmSystem *sys = wdmSystem::getInstance()) {
+        sys->flushEvent();
     }
+}
 
-    wdmAPI void wdmOpenBrowser()
-    {
-        if(const wdmConfig *conf = wdmGetConfig()) {
+wdmCLinkage wdmAPI void wdmOpenBrowser()
+{
+    if(const wdmConfig *conf = wdmGetConfig()) {
 #ifdef _WIN32
-            char url[256];
-            sprintf(url, "http://localhost:%d", conf->port);
-            ::ShellExecuteA(NULL, "open", url, "", "", SW_SHOWDEFAULT);
+        char url[256];
+        sprintf(url, "http://localhost:%d", conf->port);
+        ::ShellExecuteA(NULL, "open", url, "", "", SW_SHOWDEFAULT);
 #endif // _WIN32
-        }
     }
-    wdmAPI const wdmConfig* wdmGetConfig()
-    {
-        wdmSystem *sys = wdmSystem::getInstance();
-        return sys ? sys->getConfig() : nullptr;
-    }
+}
+wdmCLinkage wdmAPI const wdmConfig* wdmGetConfig()
+{
+    wdmSystem *sys = wdmSystem::getInstance();
+    return sys ? sys->getConfig() : nullptr;
+}
 
-    wdmAPI wdmID    _wdmGenerateID()                    { return wdmSystem::getInstance()->generateID(); }
-    wdmAPI wdmNode* _wdmGetRootNode()                   { return wdmSystem::getInstance()->getRootNode(); }
-    wdmAPI void     _wdmRegisterNode(wdmNode *node)     { wdmSystem::getInstance()->registerNode(node); }
-    wdmAPI void     _wdmUnregisterNode(wdmNode *node)   { wdmSystem::getInstance()->unregisterNode(node); }
-};
+wdmCLinkage wdmAPI wdmID    _wdmGenerateID()                    { return wdmSystem::getInstance()->generateID(); }
+wdmCLinkage wdmAPI wdmNode* _wdmGetRootNode()                   { return wdmSystem::getInstance()->getRootNode(); }
+wdmCLinkage wdmAPI void     _wdmRegisterNode(wdmNode *node)     { wdmSystem::getInstance()->registerNode(node); }
+wdmCLinkage wdmAPI void     _wdmUnregisterNode(wdmNode *node)   { wdmSystem::getInstance()->unregisterNode(node); }
+
 
 
 

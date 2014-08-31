@@ -247,14 +247,14 @@ wdmAPI bool wdmGetClassName(void *_this, char *out, size_t len)
     return false;
 }
 
-wdmAPI bool wdmEnumMemberVariablesByTypeName(const char *classname, const wdmMemberInfoCallback &f)
+wdmCLinkage wdmAPI bool wdmEnumMemberVariablesByTypeName(const char *classname, const wdmMemberInfoCallback &f)
 {
     EMVContext ctx;
     ctx.this_type = classname;
     return EnumMemberVariablesImpl(ctx, f);
 }
 
-wdmAPI bool wdmEnumMemberVariablesByTypeName(const char *classname, void *_this, const wdmMemberInfoCallback &f)
+wdmCLinkage wdmAPI bool wdmEnumMemberVariablesByTypeName2(const char *classname, void *_this, const wdmMemberInfoCallback &f)
 {
     EMVContext ctx;
     ctx.mi.this_pointer = ctx.mi.base_pointer = _this;
@@ -262,7 +262,7 @@ wdmAPI bool wdmEnumMemberVariablesByTypeName(const char *classname, void *_this,
     return EnumMemberVariablesImpl(ctx, f);
 }
 
-wdmAPI bool wdmEnumMemberVariablesByPointer(void *_this, const wdmMemberInfoCallback &f)
+wdmCLinkage wdmAPI bool wdmEnumMemberVariablesByPointer(void *_this, const wdmMemberInfoCallback &f)
 {
     EMVContext ctx;
     {
