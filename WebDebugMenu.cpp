@@ -350,7 +350,7 @@ wdmSystem::wdmSystem()
 #endif // wdmDisableEnumMemberVariables
 
 
-    if(!m_server) {
+	if (!m_server && !m_conf.disabled) {
         Poco::Net::HTTPServerParams* params = new Poco::Net::HTTPServerParams;
         params->setMaxQueued(m_conf.max_queue);
         params->setMaxThreads(m_conf.max_threads);
