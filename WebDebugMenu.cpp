@@ -54,6 +54,7 @@ wdmConfig::wdmConfig()
     , max_queue(100)
     , max_threads(2)
     , json_reserve_size(1024*1024)
+    , disabled(false)
 {
 }
 
@@ -66,7 +67,8 @@ bool wdmConfig::load(const char *path)
             if     (sscanf(buf, "port: %d", &t)==1) { port=t; }
             else if(sscanf(buf, "max_queue: %d", &t)==1) { max_queue=t; }
             else if(sscanf(buf, "max_threads: %d", &t)==1) { max_threads=t; }
-            else if(sscanf(buf, "json_reserve_size: %d", &t)==1) { json_reserve_size=t; }
+            else if (sscanf(buf, "json_reserve_size: %d", &t) == 1) { json_reserve_size = t; }
+            else if (sscanf(buf, "disable: %d", &t) == 1) { disabled = t!=0; }
         }
         fclose(f);
         return true;
@@ -377,10 +379,11 @@ wdmSystem::~wdmSystem()
         delete m_server;
         m_server = NULL;
     }
-
-    m_root->release();
-    m_root = NULL;
-    m_nodes.clear();
+    if (m_root) {
+        m_root->release();
+        m_root = NULL;
+        m_nodes.clear();
+    }
 }
 
 wdmID wdmSystem::generateID()
